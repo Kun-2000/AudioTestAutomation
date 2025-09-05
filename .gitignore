@@ -1,5 +1,7 @@
-# 忽略 Python 虛擬環境資料夾
-venv/
+# Python cache
+__pycache__/
+*.pyc
 
-# 忽略環境變數檔案
+# 也可以順便加上其他常見的 Python 忽略項
 .env
+venv/
