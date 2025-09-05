@@ -1,0 +1,2163 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>自動化測試錄音功能系統</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+      :root {
+        --primary-gradient: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+        --secondary-gradient: linear-gradient(135deg, #00cec9 0%, #55a3ff 100%);
+        --success-gradient: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+        --warning-gradient: linear-gradient(135deg, #fdcb6e 0%, #e84393 100%);
+        --danger-gradient: linear-gradient(135deg, #e84393 0%, #fd79a8 100%);
+        --bg-gradient: linear-gradient(
+          135deg,
+          #0a0a0a 0%,
+          #1a1a2e 50%,
+          #16213e 100%
+        );
+        --glass-bg: rgba(0, 212, 170, 0.08);
+        --glass-border: rgba(0, 212, 170, 0.15);
+        --shadow-light: 0 8px 32px rgba(0, 212, 170, 0.1);
+        --shadow-medium: 0 12px 40px rgba(0, 212, 170, 0.15);
+        --shadow-heavy: 0 20px 60px rgba(0, 212, 170, 0.2);
+        --text-primary: #ffffff;
+        --text-secondary: #a0a0a0;
+        --text-light: rgba(255, 255, 255, 0.9);
+        --text-dim: rgba(255, 255, 255, 0.7);
+        --accent-green: #00d4aa;
+        --accent-cyan: #00cec9;
+        --border-radius: 16px;
+        --border-radius-sm: 8px;
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      [data-theme="light"] {
+        --bg-gradient: linear-gradient(
+          135deg,
+          #f7f9fc 0%,
+          #e8f5e9 50%,
+          #e0f2f1 100%
+        );
+        --glass-bg: rgba(0, 212, 170, 0.05);
+        --glass-border: rgba(0, 212, 170, 0.1);
+        --shadow-light: 0 8px 32px rgba(0, 212, 170, 0.08);
+        --shadow-medium: 0 12px 40px rgba(0, 212, 170, 0.12);
+        --shadow-heavy: 0 20px 60px rgba(0, 212, 170, 0.15);
+        --text-primary: #2c3e50;
+        --text-secondary: #7f8c8d;
+        --text-light: rgba(44, 62, 80, 0.9);
+        --text-dim: rgba(44, 62, 80, 0.7);
+      }
+
+      .no-bullets ul {
+        list-style-type: none;
+        padding-left: 0;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        transition: color 0.3s ease, background-color 0.3s ease,
+          border-color 0.3s ease;
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+        background: var(--bg-gradient);
+        color: var(--text-primary);
+        line-height: 1.6;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* 背景動畫 */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+            circle at 20% 80%,
+            rgba(0, 212, 170, 0.15) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 20%,
+            rgba(0, 206, 201, 0.1) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 40% 40%,
+            rgba(85, 163, 255, 0.08) 0%,
+            transparent 50%
+          );
+        animation: float 20s ease-in-out infinite;
+        z-index: -1;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0px) rotate(0deg);
+        }
+        33% {
+          transform: translateY(-20px) rotate(1deg);
+        }
+        66% {
+          transform: translateY(10px) rotate(-1deg);
+        }
+      }
+
+      /* 浮動粒子背景 */
+      .floating-particles {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .particle {
+        position: absolute;
+        background: rgba(0, 212, 170, 0.1);
+        border-radius: 50%;
+        animation: float-particle 15s infinite linear;
+      }
+
+      @keyframes float-particle {
+        0% {
+          transform: translateY(100vh) rotate(0deg);
+          opacity: 0;
+        }
+        10% {
+          opacity: 1;
+        }
+        90% {
+          opacity: 1;
+        }
+        100% {
+          transform: translateY(-100px) rotate(360deg);
+          opacity: 0;
+        }
+      }
+
+      /* 主題切換器 */
+      .theme-toggle-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        padding: 8px 16px;
+        border-radius: 50px;
+        border: 1px solid var(--glass-border);
+        transition: var(--transition);
+        box-shadow: var(--shadow-light);
+      }
+
+      .theme-toggle-container:hover {
+        background: rgba(0, 212, 170, 0.12);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-medium);
+      }
+
+      .theme-toggle {
+        position: relative;
+        width: 60px;
+        height: 30px;
+        background: linear-gradient(
+          45deg,
+          rgba(0, 0, 0, 0.3),
+          rgba(45, 45, 45, 0.3)
+        );
+        border-radius: 30px;
+        border: 2px solid var(--accent-green);
+        cursor: pointer;
+        transition: var(--transition);
+        overflow: hidden;
+        box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .theme-toggle::before {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 22px;
+        height: 22px;
+        background: var(--primary-gradient);
+        border-radius: 50%;
+        transition: var(--transition);
+        box-shadow: 0 0 15px rgba(0, 212, 170, 0.6),
+          0 0 30px rgba(0, 212, 170, 0.4),
+          inset 0 2px 4px rgba(255, 255, 255, 0.3);
+      }
+
+      .theme-toggle.dark {
+        background: var(--primary-gradient);
+        border-color: #ffffff;
+        box-shadow: 0 0 20px rgba(0, 212, 170, 0.4);
+      }
+
+      .theme-toggle.dark::before {
+        transform: translateX(28px);
+        background: linear-gradient(135deg, #ffffff, #f0f0f0);
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.8),
+          0 0 30px rgba(255, 255, 255, 0.4);
+      }
+
+      .theme-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--accent-green);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        text-shadow: 0 0 10px rgba(0, 212, 170, 0.5);
+      }
+
+      /* 主要布局容器 - 改為上下分割 */
+      .main-container {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 20px;
+        padding: 20px;
+        min-height: 100vh;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      /* 上方架構圖區域 - 改為水平排列 */
+      .architecture-panel {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius);
+        padding: 30px;
+        box-shadow: var(--shadow-medium);
+        animation: slideInTop 0.6s ease;
+      }
+
+      .architecture-title {
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 1.2em;
+        font-weight: 700;
+        color: var(--accent-green);
+        border-bottom: 2px solid var(--accent-green);
+        padding-bottom: 10px;
+      }
+
+      /* 系統架構流程 - 水平佈局 */
+      .architecture-flow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 20px;
+        overflow-x: auto;
+        padding: 20px 0;
+      }
+
+      /* 下方控制面板區域 */
+      .control-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        animation: slideInBottom 0.6s ease;
+      }
+
+      @keyframes slideInTop {
+        from {
+          opacity: 0;
+          transform: translateY(-30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes slideInBottom {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* 系統方框樣式 - 調整為水平排列 */
+      .system-box {
+        min-width: 160px;
+        width: 160px;
+        height: 100px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(15px);
+        border: 2px solid var(--glass-border);
+        border-radius: var(--border-radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 600;
+        position: relative;
+        transition: var(--transition);
+        cursor: pointer;
+        box-shadow: var(--shadow-light);
+        flex-shrink: 0;
+      }
+
+      .system-box::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          45deg,
+          transparent 30%,
+          rgba(0, 212, 170, 0.05) 50%,
+          transparent 70%
+        );
+        border-radius: var(--border-radius-sm);
+        opacity: 0;
+        transition: var(--transition);
+      }
+
+      .system-box:hover::before {
+        opacity: 1;
+      }
+
+      .system-box.idle {
+        border-color: rgba(160, 160, 160, 0.3);
+        color: var(--text-secondary);
+        background: rgba(160, 160, 160, 0.05);
+      }
+
+      .system-box.active {
+        border-color: var(--accent-green);
+        color: var(--accent-green);
+        background: rgba(0, 212, 170, 0.12);
+        box-shadow: 0 0 30px rgba(0, 212, 170, 0.3), var(--shadow-medium);
+        animation: pulse-glow 2s infinite;
+      }
+
+      .system-box.completed {
+        border-color: var(--accent-green);
+        color: var(--accent-green);
+        background: rgba(0, 212, 170, 0.08);
+        box-shadow: var(--shadow-light);
+      }
+
+      .system-box.completed::after {
+        content: "✓";
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        width: 20px;
+        height: 20px;
+        background: var(--primary-gradient);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        color: white;
+        font-weight: bold;
+        border: 2px solid var(--accent-green);
+      }
+
+      @keyframes pulse-glow {
+        0%,
+        100% {
+          box-shadow: 0 0 20px rgba(0, 212, 170, 0.3), var(--shadow-medium);
+          transform: scale(1);
+        }
+        50% {
+          box-shadow: 0 0 40px rgba(0, 212, 170, 0.5), var(--shadow-medium);
+          transform: scale(1.02);
+        }
+      }
+
+      /* 流程箭頭 - 改為水平方向 */
+      .flow-arrow {
+        width: 50px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      .arrow-line {
+        width: 40px;
+        height: 2px;
+        background: var(--glass-border);
+        position: relative;
+        transition: var(--transition);
+      }
+
+      .arrow-head {
+        position: absolute;
+        right: -2px;
+        width: 0;
+        height: 0;
+        border-top: 6px solid transparent;
+        border-bottom: 6px solid transparent;
+        border-left: 8px solid var(--glass-border);
+        transition: var(--transition);
+      }
+
+      .flow-arrow.idle .arrow-line,
+      .flow-arrow.idle .arrow-head {
+        background: rgba(160, 160, 160, 0.3);
+        border-left-color: rgba(160, 160, 160, 0.3);
+      }
+
+      .flow-arrow.active .arrow-line {
+        background: var(--accent-green);
+        box-shadow: 0 0 10px rgba(0, 212, 170, 0.5);
+        animation: flow-animation-horizontal 1.5s infinite;
+      }
+
+      .flow-arrow.active .arrow-head {
+        border-left-color: var(--accent-green);
+        filter: drop-shadow(0 0 8px rgba(0, 212, 170, 0.5));
+        animation: pulse-arrow 1.5s infinite;
+      }
+
+      .flow-arrow.completed .arrow-line {
+        background: var(--accent-green);
+        box-shadow: 0 0 8px rgba(0, 212, 170, 0.3);
+      }
+
+      .flow-arrow.completed .arrow-head {
+        border-left-color: var(--accent-green);
+      }
+
+      @keyframes flow-animation-horizontal {
+        0% {
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            var(--accent-green) 50%,
+            transparent 100%
+          );
+        }
+        50% {
+          background: linear-gradient(
+            90deg,
+            var(--accent-green) 0%,
+            transparent 50%,
+            var(--accent-green) 100%
+          );
+        }
+        100% {
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            var(--accent-green) 50%,
+            transparent 100%
+          );
+        }
+      }
+
+      @keyframes pulse-arrow {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.2);
+        }
+      }
+
+      .system-box.start-end {
+        background: rgba(0, 206, 201, 0.1);
+        border-color: var(--accent-cyan);
+        font-weight: 700;
+      }
+
+      .system-box.start-end.active {
+        border-color: var(--accent-cyan);
+        color: var(--accent-cyan);
+        box-shadow: 0 0 30px rgba(0, 206, 201, 0.4), var(--shadow-medium);
+      }
+
+      .system-box.start-end.completed {
+        border-color: var(--accent-cyan);
+        color: var(--accent-cyan);
+      }
+
+      /* 右側面板樣式 */
+      .panel-section {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--border-radius);
+        padding: 25px;
+        box-shadow: var(--shadow-light);
+        position: relative;
+        overflow: hidden;
+        animation: fadeIn 0.5s ease;
+        transition: var(--transition);
+      }
+
+      .panel-section::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          45deg,
+          transparent 30%,
+          rgba(0, 212, 170, 0.03) 50%,
+          transparent 70%
+        );
+        transform: translateX(-100%);
+        transition: transform 0.6s ease;
+      }
+
+      .panel-section:hover::before {
+        transform: translateX(100%);
+      }
+
+      .panel-section:hover {
+        border-color: rgba(0, 212, 170, 0.3);
+        box-shadow: var(--shadow-medium);
+        transform: translateY(-2px);
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      h1 {
+        text-align: center;
+        margin-bottom: 40px;
+        font-size: 2.2em;
+        font-weight: 700;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 2px 20px rgba(0, 212, 170, 0.3);
+        grid-column: 1 / -1;
+      }
+
+      h2 {
+        color: var(--text-primary);
+        border-bottom: 3px solid var(--accent-green);
+        padding-bottom: 12px;
+        margin: 0 0 20px 0;
+        font-size: 1.3em;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .textarea-container {
+        position: relative;
+        margin-bottom: 15px;
+      }
+
+      textarea {
+        width: 100%;
+        height: 200px;
+        padding: 16px;
+        border: 2px solid var(--glass-border);
+        border-radius: var(--border-radius-sm);
+        font-size: 14px;
+        font-family: "SF Mono", "Courier New", monospace;
+        resize: vertical;
+        background: rgba(0, 212, 170, 0.03);
+        color: var(--text-primary);
+        transition: var(--transition);
+        backdrop-filter: blur(10px);
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: rgba(0, 212, 170, 0.4);
+        background: rgba(0, 212, 170, 0.08);
+        box-shadow: 0 0 30px rgba(0, 212, 170, 0.2);
+        transform: translateY(-2px);
+      }
+
+      textarea::placeholder {
+        color: var(--text-dim);
+      }
+
+      .textarea-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--text-dim);
+      }
+
+      .char-count {
+        font-weight: 500;
+        color: var(--accent-green);
+      }
+
+      .drag-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 212, 170, 0.15);
+        border: 2px dashed var(--accent-green);
+        border-radius: var(--border-radius-sm);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        color: var(--accent-green);
+        font-weight: 600;
+        pointer-events: none;
+        z-index: 10;
+        backdrop-filter: blur(10px);
+      }
+
+      .drag-overlay.active {
+        display: flex;
+        animation: pulse 1s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+
+      button {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        color: var(--accent-green);
+        padding: 14px 28px;
+        border-radius: var(--border-radius-sm);
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(15px);
+        box-shadow: var(--shadow-light);
+      }
+
+      button::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(0, 212, 170, 0.1),
+          transparent
+        );
+        transition: left 0.5s ease;
+      }
+
+      button:hover:not(:disabled) {
+        background: rgba(0, 212, 170, 0.12);
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-medium);
+        border-color: rgba(0, 212, 170, 0.3);
+      }
+
+      button:hover:not(:disabled)::before {
+        left: 100%;
+      }
+
+      button:disabled {
+        background: rgba(160, 160, 160, 0.05);
+        color: var(--text-secondary);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+        border-color: rgba(160, 160, 160, 0.1);
+      }
+
+      .status,
+      .result-box {
+        padding: 20px;
+        border-radius: var(--border-radius-sm);
+        margin: 20px 0;
+        border: 1px solid;
+        transition: var(--transition);
+        animation: fadeIn 0.5s ease;
+        backdrop-filter: blur(15px);
+        box-shadow: var(--shadow-light);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .status-success {
+        background: rgba(0, 212, 170, 0.1);
+        color: var(--accent-green);
+        border-color: rgba(0, 212, 170, 0.3);
+      }
+
+      .status-error {
+        background: rgba(232, 67, 147, 0.1);
+        color: #e84393;
+        border-color: rgba(232, 67, 147, 0.3);
+        animation: shake 0.5s ease;
+      }
+
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-5px);
+        }
+        75% {
+          transform: translateX(5px);
+        }
+      }
+
+      .status-info {
+        background: rgba(0, 206, 201, 0.1);
+        color: var(--accent-cyan);
+        border-color: rgba(0, 206, 201, 0.3);
+      }
+
+      .result-box {
+        background: var(--glass-bg);
+        border-color: var(--glass-border);
+        color: var(--text-primary);
+      }
+
+      .score {
+        font-size: 2.2em;
+        font-weight: 700;
+        text-align: center;
+        padding: 30px;
+        border-radius: var(--border-radius);
+        margin-bottom: 25px;
+        position: relative;
+        overflow: hidden;
+        animation: slideInUp 0.8s ease;
+        backdrop-filter: blur(20px);
+        box-shadow: var(--shadow-heavy);
+      }
+
+      .score-excellent {
+        background: var(--success-gradient);
+        color: white;
+        border: 1px solid rgba(0, 212, 170, 0.3);
+      }
+      .score-good {
+        background: var(--secondary-gradient);
+        color: white;
+        border: 1px solid rgba(0, 206, 201, 0.3);
+      }
+      .score-fair {
+        background: var(--warning-gradient);
+        color: white;
+        border: 1px solid rgba(253, 203, 110, 0.3);
+      }
+      .score-poor {
+        background: var(--danger-gradient);
+        color: white;
+        border: 1px solid rgba(232, 67, 147, 0.3);
+      }
+
+      .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(0, 212, 170, 0.3);
+        border-radius: 50%;
+        border-top-color: var(--accent-green);
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 8px;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: rgba(0, 212, 170, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 15px 0;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 212, 170, 0.2);
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: var(--primary-gradient);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+        position: relative;
+        box-shadow: 0 0 20px rgba(0, 212, 170, 0.4);
+      }
+
+      .progress-fill::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.4),
+          transparent
+        );
+        animation: shimmer 2s infinite;
+      }
+
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(100%);
+        }
+      }
+
+      .skeleton {
+        background: linear-gradient(
+          90deg,
+          rgba(0, 212, 170, 0.05) 25%,
+          rgba(0, 212, 170, 0.15) 50%,
+          rgba(0, 212, 170, 0.05) 75%
+        );
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: var(--border-radius-sm);
+        backdrop-filter: blur(10px);
+      }
+
+      @keyframes loading {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+
+      .skeleton-line {
+        height: 16px;
+        margin: 8px 0;
+      }
+      .skeleton-title {
+        height: 24px;
+        width: 60%;
+        margin: 16px 0;
+      }
+
+      .log-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: var(--glass-bg);
+        border-radius: var(--border-radius-sm);
+        transition: var(--transition);
+        animation: fadeIn 0.6s ease;
+        backdrop-filter: blur(15px);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--shadow-light);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .log-item::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 3px;
+        height: 100%;
+        background: var(--primary-gradient);
+      }
+
+      .log-item:hover {
+        transform: translateX(5px);
+        box-shadow: var(--shadow-medium);
+        border-color: rgba(0, 212, 170, 0.3);
+      }
+
+      .log-icon {
+        font-size: 28px;
+        margin-right: 16px;
+        transition: transform 0.3s ease;
+        filter: drop-shadow(0 2px 8px rgba(0, 212, 170, 0.3));
+      }
+
+      .log-item:hover .log-icon {
+        transform: scale(1.1) rotate(5deg);
+      }
+
+      .log-content {
+        flex-grow: 1;
+      }
+
+      .log-title {
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 4px;
+        color: var(--text-primary);
+      }
+
+      .log-detail {
+        font-size: 14px;
+        color: var(--text-dim);
+      }
+
+      audio {
+        width: 100%;
+        margin-top: 12px;
+        border-radius: var(--border-radius-sm);
+        background: var(--glass-bg);
+        backdrop-filter: blur(10px);
+      }
+
+      .hidden {
+        display: none;
+      }
+      .fade-enter {
+        animation: fadeIn 0.5s ease;
+      }
+
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 100px;
+        padding: 12px 20px;
+        border-radius: var(--border-radius-sm);
+        color: white;
+        font-weight: 500;
+        z-index: 1000;
+        animation: slideInRight 0.3s ease;
+        backdrop-filter: blur(20px);
+        box-shadow: var(--shadow-medium);
+        border: 1px solid;
+      }
+
+      .toast-success {
+        background: rgba(0, 212, 170, 0.9);
+        border-color: rgba(0, 212, 170, 0.3);
+      }
+
+      .toast-error {
+        background: rgba(232, 67, 147, 0.9);
+        border-color: rgba(232, 67, 147, 0.3);
+      }
+
+      .toast-info {
+        background: rgba(0, 206, 201, 0.9);
+        border-color: rgba(0, 206, 201, 0.3);
+      }
+
+      @keyframes slideInRight {
+        from {
+          opacity: 0;
+          transform: translateX(100px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .shortcut-hint {
+        font-size: 11px;
+        color: var(--text-dim);
+        margin-top: 4px;
+      }
+
+      .progress-stage {
+        text-align: center;
+        font-size: 12px;
+        color: var(--accent-green);
+        margin-top: 8px;
+        font-weight: 500;
+        opacity: 0.8;
+        transition: var(--transition);
+      }
+
+      .auto-save-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--accent-green);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .auto-save-indicator.visible {
+        opacity: 1;
+      }
+
+      /* 響應式設計 - 保持水平排列 */
+      @media (max-width: 1200px) {
+        .architecture-flow {
+          overflow-x: auto;
+          padding: 20px 10px;
+        }
+
+        .system-box {
+          min-width: 140px;
+          width: 140px;
+          font-size: 12px;
+        }
+
+        .flow-arrow {
+          min-width: 40px;
+          width: 40px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .main-container {
+          padding: 10px;
+          gap: 15px;
+        }
+
+        .architecture-panel {
+          padding: 20px;
+        }
+
+        .panel-section {
+          padding: 20px;
+        }
+
+        h1 {
+          font-size: 1.8em;
+        }
+
+        .theme-toggle-container {
+          top: 10px;
+          right: 10px;
+          padding: 6px 12px;
+          transform: scale(0.9);
+        }
+
+        textarea {
+          height: 150px;
+        }
+
+        button {
+          padding: 12px 20px;
+        }
+
+        .system-box {
+          height: 80px;
+          font-size: 12px;
+          min-width: 140px;
+          width: 140px;
+        }
+
+        .architecture-flow {
+          overflow-x: auto;
+          flex-direction: row;
+          justify-content: flex-start;
+          align-items: center;
+        }
+
+        .flow-arrow {
+          transform: none;
+          width: 40px;
+          height: 30px;
+        }
+      }
+
+      @keyframes slideInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 浮動粒子背景 -->
+    <div class="floating-particles" id="particles"></div>
+
+    <!-- 主題切換器 -->
+    <div class="theme-toggle-container">
+      <div class="theme-toggle" onclick="toggleTheme()" id="themeToggle"></div>
+      <div class="theme-label" id="themeLabel">DARK</div>
+    </div>
+
+    <!-- 主標題 -->
+    <h1>自動化測試錄音功能系統</h1>
+
+    <!-- 主要布局容器 -->
+    <div class="main-container">
+      <!-- 上方架構圖面板 -->
+      <div class="architecture-panel">
+        <div class="architecture-title">系統架構流程圖</div>
+
+        <div class="architecture-flow">
+          <!-- 系統方框 1: 前置作業 -->
+          <div class="system-box idle" id="box-preprocessing">
+            前置作業<br />
+            <small>腳本輸入與檔案處理</small>
+          </div>
+
+          <!-- 箭頭 1 -->
+          <div class="flow-arrow idle" id="arrow-1">
+            <div class="arrow-line"></div>
+            <div class="arrow-head"></div>
+          </div>
+
+          <!-- 系統方框 2: 系統啟動 -->
+          <div class="system-box start-end idle" id="box-startup">
+            自動化測試系統啟動<br />
+            <small>測試流程啟動</small>
+          </div>
+
+          <!-- 箭頭 2 -->
+          <div class="flow-arrow idle" id="arrow-2">
+            <div class="arrow-line"></div>
+            <div class="arrow-head"></div>
+          </div>
+
+          <!-- 系統方框 3: 客服系統 -->
+          <div class="system-box idle" id="box-customer-service">
+            客服系統<br />
+            <small>TTS轉換與音檔生成</small>
+          </div>
+
+          <!-- 箭頭 3 -->
+          <div class="flow-arrow idle" id="arrow-3">
+            <div class="arrow-line"></div>
+            <div class="arrow-head"></div>
+          </div>
+
+          <!-- 系統方框 4: 錄音系統 -->
+          <div class="system-box idle" id="box-recording">
+            錄音系統<br />
+            <small>複製TTS音檔模擬錄音</small>
+          </div>
+
+          <!-- 箭頭 4 -->
+          <div class="flow-arrow idle" id="arrow-4">
+            <div class="arrow-line"></div>
+            <div class="arrow-head"></div>
+          </div>
+
+          <!-- 系統方框 5: 音檔存放系統 -->
+          <div class="system-box idle" id="box-storage">
+            音檔存放系統<br />
+            <small>音檔歸檔與管理</small>
+          </div>
+
+          <!-- 箭頭 5 -->
+          <div class="flow-arrow idle" id="arrow-5">
+            <div class="arrow-line"></div>
+            <div class="arrow-head"></div>
+          </div>
+
+          <!-- 系統方框 6: LLM分析系統 -->
+          <div class="system-box idle" id="box-llm">
+            LLM分析系統<br />
+            <small>STT轉換與比對分析</small>
+          </div>
+
+          <!-- 箭頭 6 -->
+          <div class="flow-arrow idle" id="arrow-6">
+            <div class="arrow-line"></div>
+            <div class="arrow-head"></div>
+          </div>
+
+          <!-- 系統方框 7: 系統結束 -->
+          <div class="system-box start-end idle" id="box-shutdown">
+            自動化測試系統結束<br />
+            <small>測試完成與結果輸出</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- 下方控制面板 -->
+      <div class="control-panel">
+        <!-- 系統啟動狀態 -->
+        <div class="panel-section">
+          <h2>
+            <span>💻</span>
+            系統啟動狀態
+          </h2>
+          <button onclick="checkSystemStatus()">檢查服務狀態</button>
+          <div
+            id="systemStatus"
+            class="status status-info"
+            style="margin-top: 15px"
+          >
+            點擊按鈕檢查系統狀態...
+          </div>
+        </div>
+
+        <!-- 前置作業 -->
+        <div class="panel-section">
+          <h2>
+            <span>📝</span>
+            前置作業
+          </h2>
+          <div class="textarea-container">
+            <textarea
+              id="testScript"
+              placeholder="請輸入測試腳本或拖拽文字檔案至此..."
+            >
+客戶: 您好，我想詢問產品資訊。
+客服: 您好，很高興為您服務，請問需要什麼協助？
+客戶: 我想了解你們的保險產品。
+客服: 好的，我來為您介紹我們的主要保險商品。</textarea
+            >
+            <div class="drag-overlay" id="dragOverlay">
+              📄 放開以載入文字檔案
+            </div>
+          </div>
+          <div class="textarea-footer">
+            <div>
+              <span class="char-count" id="charCount">0 字元</span>
+              <span class="auto-save-indicator" id="autoSaveIndicator">
+                💾 已自動儲存
+              </span>
+            </div>
+            <div class="shortcut-hint">快捷鍵: Ctrl + Enter 開始測試</div>
+          </div>
+          <br />
+          <button id="startTestBtn" onclick="startTest()">開始測試</button>
+          <div id="testStatus" class="hidden"></div>
+          <div id="testProgress" class="progress-bar hidden">
+            <div
+              id="progressFill"
+              class="progress-fill"
+              style="width: 0%"
+            ></div>
+          </div>
+          <div id="progressStage" class="progress-stage hidden">
+            階段 1/4: TTS 轉換中...
+          </div>
+        </div>
+
+        <!-- 測試結果區域 -->
+        <div id="testResultContainer" class="hidden">
+          <!-- 客服系統 -->
+          <div id="ttsAudioBlock" class="panel-section">
+            <h2>
+              <span>🎵</span>
+              客服系統
+            </h2>
+            <div class="result-box">
+              <p><strong>TTS 生成對話音檔</strong></p>
+              <div id="ttsSkeletonLoader" class="skeleton-line hidden"></div>
+              <audio id="ttsAudioPlayer" controls class="hidden"></audio>
+            </div>
+            <div class="result-box" style="margin-top: 20px">
+              <div class="log-item">
+                <div class="log-icon">📞</div>
+                <div class="log-content">
+                  <div id="mockCallLogTitle" class="log-title">模擬通話</div>
+                  <div id="mockCallLogDetail" class="log-detail">
+                    接收 TTS 生成的完整對話音檔並模擬 API 通話。
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 錄音系統 & 音檔存放系統 -->
+          <div id="mockBlock" class="panel-section">
+            <h2>
+              <span>🎙️</span>
+              錄音系統 & 音檔存放系統
+            </h2>
+            <div class="result-box">
+              <p><strong>模擬系統錄音檔</strong></p>
+              <div id="mockSkeletonLoader" class="skeleton-line hidden"></div>
+              <audio id="mockAudioPlayer" controls class="hidden"></audio>
+            </div>
+            <div class="result-box" style="margin-top: 20px">
+              <div class="log-item">
+                <div class="log-icon">🎙️</div>
+                <div class="log-content">
+                  <div id="mockRecordLogTitle" class="log-title">
+                    高保真錄音
+                  </div>
+                  <div id="mockRecordLogDetail" class="log-detail">
+                    以 100% 保真度監聽並錄製通話內容。
+                  </div>
+                </div>
+              </div>
+              <div class="log-item">
+                <div class="log-icon">💾</div>
+                <div class="log-content">
+                  <div id="mockStoreLogTitle" class="log-title">錄音歸檔</div>
+                  <div id="mockStoreLogDetail" class="log-detail">
+                    將錄音檔儲存至長期存放系統以供分析。
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LLM分析系統 -->
+          <div id="llmResultBlock" class="panel-section">
+            <h2>
+              <span>🤖</span>
+              LLM分析系統
+            </h2>
+            <div id="llmResultContent">
+              <div class="skeleton-title skeleton"></div>
+              <div class="skeleton-line skeleton"></div>
+              <div class="skeleton-line skeleton"></div>
+              <div class="skeleton-line skeleton"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 測試紀錄 -->
+        <div class="panel-section">
+          <h2>
+            <span>📊</span>
+            測試紀錄
+          </h2>
+          <button onclick="loadTestHistory()">載入測試記錄</button>
+          <div id="testHistory" style="margin-top: 15px"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 全域狀態管理
+      const AppState = {
+        currentTestId: null,
+        pollInterval: null,
+        autoSaveTimer: null,
+        theme: localStorage.getItem("theme") || "dark",
+      };
+
+      // 架構圖狀態管理
+      const ArchitectureState = {
+        currentStep: "idle",
+        completedSteps: [],
+        components: {
+          preprocessing: { box: "box-preprocessing", arrow: null },
+          startup: { box: "box-startup", arrow: "arrow-1" },
+          tts: { box: "box-customer-service", arrow: "arrow-2" },
+          recording: { box: "box-recording", arrow: "arrow-3" },
+          storage: { box: "box-storage", arrow: "arrow-4" },
+          llm: { box: "box-llm", arrow: "arrow-5" },
+          completed: { box: "box-shutdown", arrow: "arrow-6" },
+        },
+      };
+
+      // 工具函數
+      const Utils = {
+        sleep: (ms) => new Promise((res) => setTimeout(res, ms)),
+        formatNumber: (num) => new Intl.NumberFormat("zh-TW").format(num),
+        formatDate: (date) => new Date(date).toLocaleString("zh-TW"),
+        debounce: (func, wait) => {
+          let timeout;
+          return function executedFunction(...args) {
+            const later = () => {
+              clearTimeout(timeout);
+              func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+          };
+        },
+      };
+
+      // 通知系統
+      const NotificationSystem = {
+        show: (message, type = "info", duration = 3000) => {
+          const toast = document.createElement("div");
+          toast.className = `toast toast-${type}`;
+          toast.textContent = message;
+          document.body.appendChild(toast);
+
+          setTimeout(() => {
+            toast.style.animation = "slideInRight 0.3s ease reverse";
+            setTimeout(() => document.body.removeChild(toast), 300);
+          }, duration);
+        },
+      };
+
+      // 架構圖控制函數
+      const ArchitectureControl = {
+        // 更新組件狀態
+        updateComponentState: (componentId, state) => {
+          const component = ArchitectureState.components[componentId];
+          if (!component) return;
+
+          const box = document.getElementById(component.box);
+          const arrow = component.arrow
+            ? document.getElementById(component.arrow)
+            : null;
+
+          // 更新方框狀態
+          box.className = `system-box ${
+            box.classList.contains("start-end") ? "start-end" : ""
+          } ${state}`;
+
+          // 更新箭頭狀態
+          if (arrow) {
+            arrow.className = `flow-arrow ${state}`;
+          }
+        },
+
+        // 設定當前活動步驟
+        setActiveStep: (stepId) => {
+          // 重設所有組件為idle狀態
+          Object.keys(ArchitectureState.components).forEach((key) => {
+            ArchitectureControl.updateComponentState(key, "idle");
+          });
+
+          // 設定已完成的步驟
+          ArchitectureState.completedSteps.forEach((step) => {
+            ArchitectureControl.updateComponentState(step, "completed");
+          });
+
+          // 設定當前活動步驟
+          if (stepId && stepId !== "idle") {
+            ArchitectureControl.updateComponentState(stepId, "active");
+            ArchitectureState.currentStep = stepId;
+          }
+        },
+
+        // 完成當前步驟
+        completeCurrentStep: () => {
+          if (ArchitectureState.currentStep !== "idle") {
+            ArchitectureState.completedSteps.push(
+              ArchitectureState.currentStep
+            );
+            ArchitectureControl.updateComponentState(
+              ArchitectureState.currentStep,
+              "completed"
+            );
+          }
+        },
+
+        // 重設流程狀態
+        resetFlow: () => {
+          ArchitectureState.currentStep = "idle";
+          ArchitectureState.completedSteps = [];
+
+          Object.keys(ArchitectureState.components).forEach((key) => {
+            ArchitectureControl.updateComponentState(key, "idle");
+          });
+        },
+
+        // 流程控制函數（與主系統整合）
+        startPreprocessing: () =>
+          ArchitectureControl.setActiveStep("preprocessing"),
+        completePreprocessing: () => {
+          ArchitectureControl.completeCurrentStep();
+          ArchitectureControl.setActiveStep("startup");
+        },
+
+        startSystem: () => ArchitectureControl.setActiveStep("startup"),
+        completeStartup: () => {
+          ArchitectureControl.completeCurrentStep();
+          ArchitectureControl.setActiveStep("tts");
+        },
+
+        startTTS: () => ArchitectureControl.setActiveStep("tts"),
+        completeTTS: () => {
+          ArchitectureControl.completeCurrentStep();
+          ArchitectureControl.setActiveStep("recording");
+        },
+
+        startRecording: () => ArchitectureControl.setActiveStep("recording"),
+        completeRecording: () => {
+          ArchitectureControl.completeCurrentStep();
+          ArchitectureControl.setActiveStep("storage");
+        },
+
+        startStorage: () => ArchitectureControl.setActiveStep("storage"),
+        completeStorage: () => {
+          ArchitectureControl.completeCurrentStep();
+          ArchitectureControl.setActiveStep("llm");
+        },
+
+        startLLM: () => ArchitectureControl.setActiveStep("llm"),
+        completeLLM: () => {
+          ArchitectureControl.completeCurrentStep();
+          ArchitectureControl.setActiveStep("completed");
+        },
+
+        completeTest: () => {
+          ArchitectureControl.completeCurrentStep();
+          setTimeout(() => ArchitectureControl.resetFlow(), 3000); // 3秒後重設
+        },
+      };
+
+      // 初始化浮動粒子
+      function initParticles() {
+        const particleCount = 15;
+        const particles = document.getElementById("particles");
+
+        for (let i = 0; i < particleCount; i++) {
+          const particle = document.createElement("div");
+          particle.className = "particle";
+          particle.style.left = `${Math.random() * 100}%`;
+          const size = Math.random() * 4 + 2;
+          particle.style.width = `${size}px`;
+          particle.style.height = `${size}px`;
+          particle.style.animationDelay = `${Math.random() * 15}s`;
+          particle.style.animationDuration = `${Math.random() * 10 + 12}s`;
+          particles.appendChild(particle);
+        }
+      }
+
+      // 主題切換
+      function toggleTheme() {
+        const body = document.body;
+        const themeToggle = document.getElementById("themeToggle");
+        const themeLabel = document.getElementById("themeLabel");
+        const currentTheme = body.dataset.theme;
+
+        if (currentTheme === "dark") {
+          body.dataset.theme = "light";
+          themeToggle.classList.remove("dark");
+          themeLabel.textContent = "LIGHT";
+          AppState.theme = "light";
+        } else {
+          body.dataset.theme = "dark";
+          themeToggle.classList.add("dark");
+          themeLabel.textContent = "DARK";
+          AppState.theme = "dark";
+        }
+
+        localStorage.setItem("theme", AppState.theme);
+        NotificationSystem.show(
+          `已切換至${AppState.theme === "dark" ? "深色" : "淺色"}模式`,
+          "success"
+        );
+      }
+
+      // 初始化主題
+      function initTheme() {
+        const body = document.body;
+        const themeToggle = document.getElementById("themeToggle");
+        const themeLabel = document.getElementById("themeLabel");
+
+        body.dataset.theme = AppState.theme;
+
+        if (AppState.theme === "dark") {
+          themeToggle.classList.add("dark");
+          themeLabel.textContent = "DARK";
+        } else {
+          themeToggle.classList.remove("dark");
+          themeLabel.textContent = "LIGHT";
+        }
+      }
+
+      // 字數統計
+      function updateCharCount() {
+        const textarea = document.getElementById("testScript");
+        const charCount = document.getElementById("charCount");
+        const count = textarea.value.length;
+        charCount.textContent = `${Utils.formatNumber(count)} 字元`;
+
+        if (count > 1000) {
+          charCount.style.color = "#e84393";
+        } else if (count > 500) {
+          charCount.style.color = "var(--accent-cyan)";
+        } else {
+          charCount.style.color = "var(--accent-green)";
+        }
+
+        // 當有內容時激活前置作業狀態
+        if (count > 0 && ArchitectureState.currentStep === "idle") {
+          ArchitectureControl.startPreprocessing();
+        }
+      }
+
+      // 自動儲存
+      const autoSave = Utils.debounce(() => {
+        const script = document.getElementById("testScript").value;
+        localStorage.setItem("saved_script", script);
+
+        const indicator = document.getElementById("autoSaveIndicator");
+        indicator.classList.add("visible");
+        setTimeout(() => indicator.classList.remove("visible"), 2000);
+      }, 1000);
+
+      // 載入已儲存的腳本
+      function loadSavedScript() {
+        const saved = localStorage.getItem("saved_script");
+        if (saved) {
+          document.getElementById("testScript").value = saved;
+          updateCharCount();
+        }
+      }
+
+      // 拖拽檔案處理
+      function initDragAndDrop() {
+        const textarea = document.getElementById("testScript");
+        const overlay = document.getElementById("dragOverlay");
+
+        ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+          textarea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+
+        ["dragenter", "dragover"].forEach((eventName) => {
+          textarea.addEventListener(
+            eventName,
+            () => {
+              overlay.classList.add("active");
+            },
+            false
+          );
+        });
+
+        ["dragleave", "drop"].forEach((eventName) => {
+          textarea.addEventListener(
+            eventName,
+            () => {
+              overlay.classList.remove("active");
+            },
+            false
+          );
+        });
+
+        textarea.addEventListener("drop", handleDrop, false);
+
+        function handleDrop(e) {
+          const files = e.dataTransfer.files;
+          if (files.length > 0) {
+            const file = files[0];
+            if (file.type === "text/plain") {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                textarea.value = e.target.result;
+                updateCharCount();
+                autoSave();
+                NotificationSystem.show("檔案已成功載入", "success");
+              };
+              reader.readAsText(file);
+            } else {
+              NotificationSystem.show("請選擇文字檔案 (.txt)", "error");
+            }
+          }
+        }
+      }
+
+      // 快捷鍵支援
+      function initKeyboardShortcuts() {
+        document.addEventListener("keydown", (e) => {
+          if (e.ctrlKey && e.key === "Enter") {
+            e.preventDefault();
+            startTest();
+          }
+        });
+      }
+
+      // 進度條更新
+      function updateProgress(percentage, stage = "") {
+        const progressBar = document.getElementById("testProgress");
+        const progressFill = document.getElementById("progressFill");
+        const progressStage = document.getElementById("progressStage");
+
+        if (percentage === 0) {
+          progressBar.classList.add("hidden");
+          progressStage.classList.add("hidden");
+        } else {
+          progressBar.classList.remove("hidden");
+          progressStage.classList.remove("hidden");
+          progressFill.style.width = `${percentage}%`;
+
+          if (stage) {
+            progressStage.textContent = stage;
+          } else {
+            if (percentage <= 25) {
+              progressStage.textContent = "階段 1/4: TTS 轉換中...";
+            } else if (percentage <= 50) {
+              progressStage.textContent = "階段 2/4: 客戶互動模擬中...";
+            } else if (percentage <= 75) {
+              progressStage.textContent = "階段 3/4: 系統錄音與歸檔中...";
+            } else {
+              progressStage.textContent = "階段 4/4: LLM 比對分析中...";
+            }
+          }
+        }
+      }
+
+      // 系統狀態檢查
+      async function checkSystemStatus() {
+        const statusDiv = document.getElementById("systemStatus");
+
+        statusDiv.innerHTML =
+          '<div class="loading-spinner"></div>正在檢查系統狀態...';
+
+        try {
+          const response = await fetch("/api/system/status");
+          const data = await response.json();
+
+          let statusHtml = `<div class="status ${
+            data.status === "healthy" ? "status-success" : "status-error"
+          }">`;
+          statusHtml += `<strong>系統狀態:</strong> ${data.message}`;
+          statusHtml += "</div>";
+          statusDiv.innerHTML = statusHtml;
+
+          NotificationSystem.show(
+            data.status === "healthy" ? "系統運行正常" : "系統狀態異常",
+            data.status === "healthy" ? "success" : "error"
+          );
+        } catch (error) {
+          statusDiv.innerHTML = `<div class="status status-error">無法檢查系統狀態: ${error.message}</div>`;
+          NotificationSystem.show("系統狀態檢查失敗", "error");
+        }
+      }
+
+      // 開始測試
+      async function startTest() {
+        const script = document.getElementById("testScript").value.trim();
+        if (!script) {
+          NotificationSystem.show("請輸入測試腳本", "error");
+          document.getElementById("testScript").style.animation =
+            "shake 0.5s ease";
+          return;
+        }
+
+        const startBtn = document.getElementById("startTestBtn");
+        const testStatusDiv = document.getElementById("testStatus");
+        const testResultContainer = document.getElementById(
+          "testResultContainer"
+        );
+
+        startBtn.disabled = true;
+        startBtn.innerHTML = '<div class="loading-spinner"></div>執行中...';
+        testStatusDiv.className = "status status-info fade-enter";
+        testStatusDiv.classList.remove("hidden");
+        testStatusDiv.innerHTML = "正在啟動測試...";
+        testResultContainer.classList.add("hidden");
+
+        // 完成前置作業，開始系統啟動
+        ArchitectureControl.completePreprocessing();
+        updateProgress(10);
+
+        try {
+          const response = await fetch("/api/test/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ script: script }),
+          });
+
+          if (!response.ok)
+            throw new Error(`伺服器錯誤: ${response.statusText}`);
+
+          const data = await response.json();
+          AppState.currentTestId = data.test_id;
+          testStatusDiv.innerHTML = `測試已開始，ID: ${data.test_id}`;
+          updateProgress(10, "階段 1/4: TTS 轉換準備中...");
+
+          NotificationSystem.show("測試已成功啟動", "success");
+
+          // 完成系統啟動，開始輪詢
+          ArchitectureControl.completeStartup();
+          startPolling();
+        } catch (error) {
+          testStatusDiv.className = "status status-error";
+          testStatusDiv.innerHTML = `測試啟動失敗: ${error.message}`;
+          startBtn.disabled = false;
+          startBtn.innerHTML = "開始測試";
+          updateProgress(0);
+          NotificationSystem.show("測試啟動失敗", "error");
+          ArchitectureControl.resetFlow();
+        }
+      }
+
+      // 輪詢測試狀態
+      function startPolling() {
+        if (AppState.pollInterval) clearInterval(AppState.pollInterval);
+
+        AppState.pollInterval = setInterval(async () => {
+          if (!AppState.currentTestId) return;
+
+          try {
+            const response = await fetch(
+              `/api/test/${AppState.currentTestId}/status`
+            );
+            const data = await response.json();
+            const testStatusDiv = document.getElementById("testStatus");
+
+            if (data.status === "completed" || data.status === "failed") {
+              clearInterval(AppState.pollInterval);
+
+              const startBtn = document.getElementById("startTestBtn");
+              startBtn.disabled = false;
+              startBtn.innerHTML = "開始測試";
+
+              testStatusDiv.className = `status ${
+                data.status === "completed" ? "status-success" : "status-error"
+              }`;
+              testStatusDiv.innerHTML =
+                data.status === "completed"
+                  ? `測試完成 (ID: ${AppState.currentTestId})`
+                  : `測試失敗: ${data.error_message || "未知錯誤"}`;
+
+              if (data.status === "completed") {
+                // 測試完成後載入結果
+                await loadTestResult(AppState.currentTestId);
+              } else {
+                NotificationSystem.show("測試失敗", "error");
+                updateProgress(0);
+                ArchitectureControl.resetFlow();
+              }
+            } else {
+              testStatusDiv.innerHTML = `測試執行中... 狀態: ${data.status}`;
+
+              // 根據後端狀態更新架構圖
+              if (data.status === "tts_processing") {
+                ArchitectureControl.startTTS();
+              } else if (data.status === "recording") {
+                ArchitectureControl.startRecording();
+              } else if (data.status === "storing") {
+                ArchitectureControl.startStorage();
+              } else if (data.status === "llm_analysis") {
+                ArchitectureControl.startLLM();
+              }
+            }
+          } catch (error) {
+            console.error("輪詢錯誤:", error);
+            clearInterval(AppState.pollInterval);
+            NotificationSystem.show("狀態查詢失敗", "error");
+          }
+        }, 3000);
+      }
+
+      // 載入測試結果
+      async function loadTestResult(testId) {
+        const testResultContainer = document.getElementById(
+          "testResultContainer"
+        );
+        const ttsAudioBlock = document.getElementById("ttsAudioBlock");
+        const mockBlock = document.getElementById("mockBlock");
+        const llmResultBlock = document.getElementById("llmResultBlock");
+
+        // 隱藏所有結果區塊
+        testResultContainer.classList.remove("hidden");
+        ttsAudioBlock.classList.add("hidden");
+        mockBlock.classList.add("hidden");
+        llmResultBlock.classList.add("hidden");
+
+        try {
+          const response = await fetch(`/api/test/${testId}/result`);
+          if (!response.ok) throw new Error("無法獲取報告");
+          const data = await response.json();
+
+          // 階段1: TTS轉換 (0-25%)
+          updateProgress(25, "階段 1/4: TTS 轉換完成 ✓");
+          NotificationSystem.show("TTS 轉換完成", "success");
+          ArchitectureControl.startTTS();
+          await Utils.sleep(1000);
+
+          // 階段2: 客戶互動模擬 (25-50%)
+          updateProgress(50, "階段 2/4: 客戶互動模擬中...");
+          ArchitectureControl.completeTTS();
+          ArchitectureControl.startRecording();
+          ttsAudioBlock.classList.remove("hidden");
+          await loadTTSAudio(data);
+          await renderMockCallLogs();
+          updateProgress(50, "階段 2/4: 客戶互動模擬完成 ✓");
+          NotificationSystem.show("客戶互動模擬完成", "success");
+          await Utils.sleep(1500);
+
+          // 階段3: 系統錄音與歸檔 (50-75%)
+          updateProgress(75, "階段 3/4: 系統錄音與歸檔中...");
+          ArchitectureControl.completeRecording();
+          ArchitectureControl.startStorage();
+          mockBlock.classList.remove("hidden");
+          await loadMockAudio(data);
+          await renderRecordingLogs();
+          updateProgress(75, "階段 3/4: 系統錄音與歸檔完成 ✓");
+          NotificationSystem.show("系統錄音與歸檔完成", "success");
+          await Utils.sleep(1500);
+
+          // 階段4: LLM比對結果 (75-100%)
+          updateProgress(100, "階段 4/4: LLM 比對分析中...");
+          ArchitectureControl.completeStorage();
+          ArchitectureControl.startLLM();
+          llmResultBlock.classList.remove("hidden");
+          await renderLLMResults(data);
+          updateProgress(100, "階段 4/4: LLM 比對分析完成 ✓");
+          NotificationSystem.show("LLM 比對分析完成", "success");
+          ArchitectureControl.completeLLM();
+
+          // 完成測試並重設架構圖
+          ArchitectureControl.completeTest();
+
+          // 完成後隱藏進度條
+          setTimeout(() => updateProgress(0), 2000);
+        } catch (error) {
+          document.getElementById(
+            "llmResultContent"
+          ).innerHTML = `<div class="status status-error">載入測試結果失敗: ${error.message}</div>`;
+          NotificationSystem.show("結果載入失敗", "error");
+          updateProgress(0);
+          ArchitectureControl.resetFlow();
+        }
+      }
+      async function loadTTSAudio(data) {
+        document.getElementById("ttsSkeletonLoader").classList.remove("hidden");
+        document.getElementById("ttsAudioPlayer").classList.add("hidden");
+
+        await Utils.sleep(800);
+
+        document.getElementById("ttsSkeletonLoader").classList.add("hidden");
+        document.getElementById("ttsAudioPlayer").src = data.tts_audio.web_path;
+        document.getElementById("ttsAudioPlayer").classList.remove("hidden");
+      }
+
+      // 載入 Mock 音檔
+      async function loadMockAudio(data) {
+        document
+          .getElementById("mockSkeletonLoader")
+          .classList.remove("hidden");
+        document.getElementById("mockAudioPlayer").classList.add("hidden");
+
+        await Utils.sleep(800);
+
+        document.getElementById("mockSkeletonLoader").classList.add("hidden");
+        document.getElementById("mockAudioPlayer").src =
+          data.mock_response_audio.web_path;
+        document.getElementById("mockAudioPlayer").classList.remove("hidden");
+      }
+
+      // 渲染模擬通話日誌
+      async function renderMockCallLogs() {
+        const callTitle = document.getElementById("mockCallLogTitle");
+        const callDetail = document.getElementById("mockCallLogDetail");
+
+        callTitle.innerHTML =
+          '模擬通話 <span style="color: var(--text-dim);">[處理中...]</span>';
+        callDetail.textContent = "正在處理 TTS 生成的完整對話音檔...";
+        await Utils.sleep(1000);
+
+        callTitle.innerHTML =
+          '模擬通話 <span style="color: var(--accent-green); font-weight: 600;">[完成]</span>';
+        callDetail.textContent = "接收 TTS 生成的完整對話音檔並模擬 API 通話。";
+      }
+
+      // 渲染錄音日誌動畫
+      async function renderRecordingLogs() {
+        const recordTitle = document.getElementById("mockRecordLogTitle");
+        const storeTitle = document.getElementById("mockStoreLogTitle");
+
+        recordTitle.innerHTML =
+          '高保真錄音 <span style="color: var(--text-dim);">[錄製中...]</span>';
+        await Utils.sleep(800);
+
+        recordTitle.innerHTML =
+          '高保真錄音 <span style="color: var(--accent-green); font-weight: 600;">[完成]</span>';
+        storeTitle.innerHTML =
+          '錄音歸檔 <span style="color: var(--text-dim);">[歸檔中...]</span>';
+        await Utils.sleep(600);
+
+        storeTitle.innerHTML =
+          '錄音歸檔 <span style="color: var(--accent-green); font-weight: 600;">[完成]</span>';
+      }
+
+      // 渲染 LLM 結果
+      async function renderLLMResults(data) {
+        await Utils.sleep(1000);
+
+        const llmResultContent = document.getElementById("llmResultContent");
+        const score = data.llm_analysis.accuracy_score || 0;
+
+        let scoreClass = "score-excellent";
+        if (score < 60) scoreClass = "score-poor";
+        else if (score < 80) scoreClass = "score-fair";
+        else if (score < 90) scoreClass = "score-good";
+
+        let resultHtml = `<div class="score ${scoreClass}">準確率: ${score.toFixed(
+          1
+        )}%</div>`;
+
+        resultHtml += `<div class="result-box fade-enter"><strong>📝 分析摘要:</strong><br>${
+          data.llm_analysis.reasoning || "無摘要"
+        }</div>`;
+
+        if (data.llm_analysis.key_differences?.length > 0) {
+          resultHtml +=
+            '<div class="result-box fade-enter no-bullets"><strong>🔍 主要差異:</strong><ul>';
+          data.llm_analysis.key_differences.forEach((diff) => {
+            resultHtml += `<li>• ${diff}</li>`;
+          });
+          resultHtml += "</ul></div>";
+        }
+
+        if (data.llm_analysis.suggestions?.length > 0) {
+          resultHtml +=
+            '<div class="result-box fade-enter no-bullets"><strong>💡 改進建議:</strong><ul>';
+          data.llm_analysis.suggestions.forEach((sugg) => {
+            resultHtml += `<li>• ${sugg}</li>`;
+          });
+          resultHtml += "</ul></div>";
+        }
+
+        resultHtml += `<div class="result-box fade-enter"><strong>📜 原始腳本:</strong><pre>${data.original_script}</pre></div>`;
+        resultHtml += `<div class="result-box fade-enter"><strong>🎯 轉錄結果:</strong><pre>${data.transcribed_text}</pre></div>`;
+
+        llmResultContent.innerHTML = resultHtml;
+      }
+
+      // 載入測試記錄
+      async function loadTestHistory() {
+        const historyDiv = document.getElementById("testHistory");
+        historyDiv.innerHTML =
+          '<div class="loading-spinner"></div>正在載入測試記錄...';
+
+        try {
+          const response = await fetch("/api/tests/list?limit=5");
+          const data = await response.json();
+
+          if (data.tests.length === 0) {
+            historyDiv.innerHTML = "<p>目前沒有測試記錄</p>";
+            return;
+          }
+
+          let historyHtml = `<p>共 ${Utils.formatNumber(
+            data.total
+          )} 個測試記錄，顯示最近 ${data.tests.length} 個:</p>`;
+          historyHtml +=
+            '<div style="display: flex; flex-direction: column; gap: 15px;">';
+
+          data.tests.forEach((test, index) => {
+            const statusIcon =
+              test.status === "completed"
+                ? "✅"
+                : test.status === "failed"
+                ? "❌"
+                : "🔄";
+            const scoreColor =
+              test.accuracy_score >= 80
+                ? "var(--accent-green)"
+                : test.accuracy_score >= 60
+                ? "var(--accent-cyan)"
+                : "#e84393";
+
+            historyHtml += `
+              <div class="result-box fade-enter" style="animation-delay: ${
+                index * 0.1
+              }s;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                  <div>
+                    ${statusIcon} <strong>ID:</strong> ${test.test_id.substring(
+              0,
+              8
+            )}...
+                    <span style="color: ${scoreColor}; font-weight: 600; margin-left: 10px;">
+                      ${test.accuracy_score.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div style="color: var(--text-dim); font-size: 12px;">
+                    ${Utils.formatDate(test.timestamp)}
+                  </div>
+                </div>
+                <div style="font-size: 14px; color: var(--text-dim); margin-bottom: 10px;">
+                  ${test.script_preview}
+                </div>
+                ${
+                  test.status === "completed"
+                    ? `<button onclick="loadTestResult('${test.test_id}')" style="padding: 6px 12px; font-size: 12px;">查看結果</button>`
+                    : ""
+                }
+              </div>
+            `;
+          });
+
+          historyHtml += "</div>";
+          historyDiv.innerHTML = historyHtml;
+        } catch (error) {
+          historyDiv.innerHTML = `<div class="status status-error">載入測試記錄失敗: ${error.message}</div>`;
+          NotificationSystem.show("記錄載入失敗", "error");
+        }
+      }
+
+      // 頁面載入時初始化
+      window.onload = function () {
+        initTheme();
+        initParticles();
+        loadSavedScript();
+        initDragAndDrop();
+        initKeyboardShortcuts();
+        ArchitectureControl.resetFlow();
+        checkSystemStatus();
+        loadTestHistory();
+
+        const textarea = document.getElementById("testScript");
+        textarea.addEventListener("input", () => {
+          updateCharCount();
+          autoSave();
+        });
+
+        updateCharCount();
+        NotificationSystem.show("系統已準備就緒", "success");
+      };
+
+      window.onbeforeunload = function () {
+        if (AppState.pollInterval) clearInterval(AppState.pollInterval);
+        if (AppState.autoSaveTimer) clearTimeout(AppState.autoSaveTimer);
+      };
+    </script>
+  </body>
+</html>
