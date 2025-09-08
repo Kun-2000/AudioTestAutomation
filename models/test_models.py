@@ -93,9 +93,7 @@ class TestScript:
                     role = SpeakerRole.AGENT
                 else:
                     continue
-                lines.append(
-                    DialogueLine(speaker=role, text=text.strip(), pause_after=1.0)
-                )
+                lines.append(DialogueLine(speaker=role, text=text.strip()))
         self.dialogue_lines = lines
         return lines
 
