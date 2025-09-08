@@ -47,7 +47,7 @@ def print_startup_info():
     print("🚀 客服測試系統")
     print("=" * 60)
     print(f"📊 TTS: Yating TTS ({settings.YATING_TTS_MODEL_CUSTOMER})")
-    print(f"🎤 STT: OpenAI Whisper ({settings.STT_MODEL})")
+    print(f"🎤 STT: OpenAI ({settings.STT_MODEL})")
     print(f"🤖 LLM: OpenAI ({settings.LLM_MODEL})")
     print(f"💾 存儲路徑: {settings.STORAGE_PATH}")
     print("🌐 Web 介面: http://localhost:8000")
