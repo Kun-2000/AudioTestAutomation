@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Dict
 import httpx
 
+from config.settings import settings
 from models.test_models import TestScript, TestResult, TestStatus, TestStep
 from services.tts_service import TTSService
 from services.stt_service import STTService
@@ -26,9 +27,9 @@ class TestOrchestrator:
         try:
             logger.info("初始化 TTS 服務: Yating")
             self.tts_service = TTSService()
-            logger.info("初始化 STT 服務: gpt-4o-transcribe")
+            logger.info("初始化 STT 服務: %s", settings.STT_MODEL)
             self.stt_service = STTService()
-            logger.info("初始化 LLM 服務: gpt-4o")
+            logger.info("初始化 LLM 服務: %s", settings.LLM_MODEL)
             self.llm_service = LLMService()
             self.cs_mock = CustomerServiceMock()
             self.storage_mock = AudioStorageMock()
@@ -489,22 +490,24 @@ class TestOrchestrator:
             status["tts (yating)"] = False
 
         try:
-            status["stt (gpt-4o-transcribe)"] = await self.stt_service.test_connection()
+            stt_key = f"stt ({settings.STT_MODEL})"
+            status[stt_key] = await self.stt_service.test_connection()
         except httpx.RequestError as e:
             logger.warning("STT 服務狀態檢查失敗（請求錯誤）: %s", e)
-            status["stt (gpt-4o-transcribe)"] = False
+            status[stt_key] = False
         except httpx.HTTPStatusError as e:
             logger.warning("STT 服務狀態檢查失敗（HTTP 錯誤）: %s", e)
-            status["stt (gpt-4o-transcribe)"] = False
+            status[stt_key] = False
 
         try:
-            status["llm (gpt-4o)"] = await self.llm_service.test_connection()
+            llm_key = f"llm ({settings.LLM_MODEL})"
+            status[llm_key] = await self.llm_service.test_connection()
         except httpx.RequestError as e:
             logger.warning("LLM 服務狀態檢查失敗（請求錯誤）: %s", e)
-            status["llm (gpt-4o)"] = False
+            status[llm_key] = False
         except httpx.HTTPStatusError as e:
             logger.warning("LLM 服務狀態檢查失敗（HTTP 錯誤）: %s", e)
-            status["llm (gpt-4o)"] = False
+            status[llm_key] = False
 
         return status
 

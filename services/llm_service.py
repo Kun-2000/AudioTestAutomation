@@ -23,7 +23,7 @@ class LLMService:
                 raise ValueError("OpenAI API Key 未設定")
             self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
             self.model = settings.LLM_MODEL
-            logger.info("LLM 服務 (非同步) 初始化成功")
+            logger.info("LLM 服務 (非同步) 初始化成功，使用模型: %s", self.model)
         except Exception as e:
             logger.error("LLM 服務初始化失敗: %s", e)
             raise
@@ -74,7 +74,6 @@ class LLMService:
 
     def _build_analysis_prompt(self, original: str, transcribed: str) -> str:
         """建構分析提示詞"""
-        # --- 修正點：在提示詞中加入說明，告知 AI 角色標識已被移除 ---
         return f"""你是專業的客服對話品質分析師。請比較以下原始腳本與實際轉錄文字，分析客服對話的品質。
 
 【重要前提】
@@ -151,7 +150,7 @@ class LLMService:
     async def test_connection(self) -> bool:
         """測試 OpenAI GPT 連接 (非同步版本)"""
         try:
-            logger.info("測試 OpenAI GPT 連接...")
+            logger.info("測試 OpenAI GPT (%s) 連接...", self.model)
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": "回答'測試成功'"}],

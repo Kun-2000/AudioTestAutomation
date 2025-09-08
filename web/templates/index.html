@@ -1351,8 +1351,8 @@
                 id="testScript"
                 placeholder="請輸入測試腳本或拖拽文字檔案至此..."
               >
-客戶: 您好，我想詢問產品資訊。
-客服: 您好，很高興為您服務，請問需要什麼協助？
+客戶: 你好，我想詢問產品資訊。
+客服: 很高興為您服務，請問需要什麼協助？
 客戶: 我想了解你們的保險產品。
 客服: 好的，我來為您介紹我們的主要保險商品。</textarea
               >
@@ -1403,14 +1403,14 @@
                 <div class="log-item">
                   <div class="log-icon">🎤</div>
                   <div class="log-content">
-                    <div class="log-title">STT API</div>
+                    <div class="log-title" id="sttApiTitle">STT API</div>
                     <div class="log-detail" id="sttApiStatus">等待檢查...</div>
                   </div>
                 </div>
                 <div class="log-item">
                   <div class="log-icon">🤖</div>
                   <div class="log-content">
-                    <div class="log-title">LLM API</div>
+                    <div class="log-title" id="llmApiTitle">LLM API</div>
                     <div class="log-detail" id="llmApiStatus">等待檢查...</div>
                   </div>
                 </div>
@@ -2474,6 +2474,9 @@
           const sttStatus = document.getElementById("sttApiStatus");
           const llmStatus = document.getElementById("llmApiStatus");
 
+          const sttApiTitle = document.getElementById("sttApiTitle");
+          const llmApiTitle = document.getElementById("llmApiTitle");
+
           const updateApiStatus = (element, isHealthy) => {
             if (isHealthy) {
               element.textContent = "✅ 連線正常";
@@ -2485,8 +2488,26 @@
           };
 
           updateApiStatus(ttsStatus, data.services["tts (yating)"]);
-          updateApiStatus(sttStatus, data.services["stt (gpt-4o-transcribe)"]);
-          updateApiStatus(llmStatus, data.services["llm (gpt-4o)"]);
+          const sttServiceKey = Object.keys(data.services).find(key => key.startsWith("stt ("));
+
+          if (sttServiceKey) {
+            const modelName = sttServiceKey.match(/\((.*?)\)/)[1];
+            sttApiTitle.textContent = `STT API (${modelName})`;
+            updateApiStatus(sttStatus, data.services[sttServiceKey]);
+          } else {
+            sttApiTitle.textContent = "STT API";
+            updateApiStatus(sttStatus, false);
+          }
+
+          const llmServiceKey = Object.keys(data.services).find(key => key.startsWith("llm ("));
+          if (llmServiceKey) {
+            const modelName = llmServiceKey.match(/\((.*?)\)/)[1];
+            llmApiTitle.textContent = `LLM API (${modelName})`;
+            updateApiStatus(llmStatus, data.services[llmServiceKey]);
+          } else {
+            llmApiTitle.textContent = "LLM API";
+            updateApiStatus(llmStatus, false);
+          }
 
           const overallStatus = data.status === "healthy";
           NotificationSystem.show(

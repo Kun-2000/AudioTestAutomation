@@ -1,11 +1,11 @@
 """
-STT 服務模組 - 使用 OpenAI GPT-4o-transcribe (非同步版本)
+STT 服務模組 - 使用 OpenAI STT (非同步版本)
 """
 
 import logging
 from pathlib import Path
 from typing import Tuple
-from openai import AsyncOpenAI, APIError  # 改為 AsyncOpenAI
+from openai import AsyncOpenAI, APIError
 
 from config.settings import settings
 
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class STTService:
-    """OpenAI GPT-4o-transcribe STT 服務"""
+    """OpenAI STT 服務"""
 
     def __init__(self):
         """初始化 STT 服務"""
@@ -21,7 +21,6 @@ class STTService:
             if not settings.OPENAI_API_KEY:
                 raise ValueError("OpenAI API Key 未設定")
 
-            # 改為 AsyncOpenAI
             self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
             self.model = settings.STT_MODEL
             self.prompt = settings.STT_PROMPT
@@ -33,7 +32,7 @@ class STTService:
             raise
 
     async def transcribe_audio(self, audio_file_path: str) -> Tuple[str, float]:
-        """使用 OpenAI GPT-4o-transcribe 轉錄音檔 (非同步版本)"""
+        """使用 OpenAI STT 轉錄音檔 (非同步版本)"""
         try:
             audio_path = Path(audio_file_path)
 
@@ -54,7 +53,6 @@ class STTService:
             logger.info("開始轉錄音檔: %s (%.1f KB)", audio_path.name, file_size / 1024)
 
             with open(audio_file_path, "rb") as audio_file:
-                # 改為 await
                 response = await self.client.audio.transcriptions.create(
                     model=self.model,
                     file=audio_file,
@@ -90,10 +88,10 @@ class STTService:
             raise RuntimeError(f"語音轉錄失敗: {e}") from e
 
     async def test_connection(self) -> bool:
-        """測試 OpenAI GPT-4o-transcribe 連接 (非同步版本)"""
+        """測試 OpenAI STT 連接 (非同步版本)"""
         try:
-            logger.info("測試 OpenAI GPT-4o-transcribe 連接...")
-            # 改為 await
+            logger.info("測試 OpenAI %s 連接...", self.model)
+
             models = await self.client.models.list()
             available_models = [model.id for model in models.data]
             model_available = self.model in available_models
