@@ -70,7 +70,7 @@ class DialogueLine:
 
     speaker: SpeakerRole
     text: str
-    pause_after: float = 1.0
+    pause_after: float = 0.3
 
 
 @dataclass

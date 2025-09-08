@@ -39,7 +39,7 @@ class Settings:
         "YATING_TTS_MODEL_CUSTOMER", "zh_en_female_1"
     )
     YATING_TTS_MODEL_AGENT: str = os.getenv("YATING_TTS_MODEL_AGENT", "zh_en_male_1")
-    YATING_TTS_SPEED: float = float(os.getenv("YATING_TTS_SPEED", "1.5"))
+    YATING_TTS_SPEED: float = float(os.getenv("YATING_TTS_SPEED", "1.0"))
     YATING_TTS_PITCH: float = float(os.getenv("YATING_TTS_PITCH", "1.0"))
     YATING_TTS_ENERGY: float = float(os.getenv("YATING_TTS_ENERGY", "1.0"))
     YATING_TTS_ENCODING: str = os.getenv("YATING_TTS_ENCODING", "MP3")
