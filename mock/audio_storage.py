@@ -5,7 +5,7 @@ Mock 音檔存放系統模組
 import logging
 import uuid
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Optional, List, Any
 
@@ -76,13 +76,13 @@ class AudioStorageMock:
                 "metadata": metadata or {},
             }
 
-            logger.info(f"音檔已儲存: {target_filename} (ID: {file_id})")
+            logger.info("音檔已儲存: %s (ID: %s)", target_filename, file_id)
 
             return file_id
 
         except Exception as e:
-            logger.error(f"儲存音檔失敗: {e}")
-            raise RuntimeError(f"音檔儲存錯誤: {e}")
+            logger.error("儲存音檔失敗: %s", e)
+            raise RuntimeError(f"音檔儲存錯誤: {e}") from e
 
     def retrieve_audio(self, file_id: str) -> Optional[AudioFile]:
         """
@@ -96,18 +96,19 @@ class AudioStorageMock:
         """
         try:
             if file_id not in self.audio_metadata:
-                logger.warning(f"找不到音檔 ID: {file_id}")
-                return None
+                raise KeyError(f"找不到音檔 ID: {file_id}")
 
             metadata = self.audio_metadata[file_id]
             file_path = Path(metadata["file_path"])
 
             # 檢查檔案是否仍然存在
             if not file_path.exists():
-                logger.error(f"音檔檔案已遺失: {metadata['stored_filename']}")
+                logger.error("音檔檔案已遺失: %s", metadata["stored_filename"])
                 # 從後設資料中移除
                 del self.audio_metadata[file_id]
-                return None
+                raise FileNotFoundError(
+                    f"音檔檔案已遺失: {metadata['stored_filename']}"
+                )
 
             # 創建 AudioFile 物件
             audio_file = AudioFile(
@@ -117,13 +118,13 @@ class AudioStorageMock:
                 format=metadata["format"],
             )
 
-            logger.info(f"音檔讀取成功: {metadata['stored_filename']}")
+            logger.info("音檔讀取成功: %s", metadata["stored_filename"])
 
             return audio_file
 
-        except Exception as e:
-            logger.error(f"讀取音檔失敗: {e}")
-            return None
+        except (FileNotFoundError, KeyError, OSError) as e:
+            logger.error("讀取音檔失敗: %s", e)
+        return None
 
     def delete_audio(self, file_id: str) -> bool:
         """
@@ -135,29 +136,49 @@ class AudioStorageMock:
         Returns:
             刪除是否成功
         """
+
         try:
-            if file_id not in self.audio_metadata:
-                logger.warning(f"找不到要刪除的音檔 ID: {file_id}")
+            # 檢查 file_id 是否存在
+            metadata = self._get_metadata(file_id)
+            if not metadata:
                 return False
 
-            metadata = self.audio_metadata[file_id]
             file_path = Path(metadata["file_path"])
 
             # 刪除實體檔案
             if file_path.exists():
                 file_path.unlink()
-                logger.info(f"實體檔案已刪除: {metadata['stored_filename']}")
+                logger.info("實體檔案已刪除: %s", metadata["stored_filename"])
 
             # 從後設資料中移除
             del self.audio_metadata[file_id]
 
-            logger.info(f"音檔已完全刪除: ID {file_id}")
+            logger.info("音檔已完全刪除: ID %s", file_id)
 
             return True
 
-        except Exception as e:
-            logger.error(f"刪除音檔失敗: {e}")
-            return False
+        except FileNotFoundError as e:
+            logger.error("刪除音檔失敗（檔案未找到）: %s", e)
+        except KeyError as e:
+            logger.error("刪除音檔失敗（鍵錯誤）: %s", e)
+        except OSError as e:
+            logger.error("刪除音檔失敗（系統錯誤）: %s", e)
+        return False
+
+    def _get_metadata(self, file_id: str) -> Optional[Dict[str, Any]]:
+        """
+        根據 file_id 獲取後設資料，若不存在則記錄警告並返回 None
+
+        Args:
+            file_id: 音檔 ID
+
+        Returns:
+            後設資料字典，若不存在則返回 None
+        """
+        if file_id not in self.audio_metadata:
+            logger.warning("找不到音檔 ID: %s", file_id)
+            return None
+        return self.audio_metadata[file_id]
 
     def list_audio_files(self, limit: int = 50) -> List[Dict[str, Any]]:
         """
@@ -193,9 +214,11 @@ class AudioStorageMock:
 
             return audio_list
 
-        except Exception as e:
-            logger.error(f"列出音檔清單失敗: {e}")
-            return []
+        except KeyError as e:
+            logger.error("列出音檔清單失敗（鍵錯誤）: %s", e)
+        except OSError as e:
+            logger.error("列出音檔清單失敗（系統錯誤）: %s", e)
+        return []
 
     def get_storage_stats(self) -> Dict[str, Any]:
         """
@@ -224,8 +247,15 @@ class AudioStorageMock:
                 "storage_path": str(settings.AUDIO_PATH),
             }
 
-        except Exception as e:
-            logger.error(f"獲取存放統計失敗: {e}")
+        except KeyError as e:
+            logger.error("獲取存放統計失敗（鍵錯誤）: %s", e)
+        except ZeroDivisionError as e:
+            logger.error("獲取存放統計失敗（除以零錯誤）: %s", e)
+        except OSError as e:
+            logger.error("獲取存放統計失敗（系統錯誤）: %s", e)
+        except ValueError as e:
+            logger.error("獲取存放統計失敗（值錯誤）: %s", e)
+
             return {
                 "total_files": 0,
                 "total_size_bytes": 0,
@@ -247,7 +277,6 @@ class AudioStorageMock:
             清理的檔案數量
         """
         try:
-            from datetime import timedelta
 
             cutoff_date = datetime.now() - timedelta(days=days)
             cleanup_count = 0
@@ -264,10 +293,17 @@ class AudioStorageMock:
                 if self.delete_audio(file_id):
                     cleanup_count += 1
 
-            logger.info(f"清理完成，共清理了 {cleanup_count} 個舊檔案")
+            logger.info("清理完成，共清理了 %d 個舊檔案", cleanup_count)
 
             return cleanup_count
 
-        except Exception as e:
-            logger.error(f"清理舊檔案失敗: {e}")
-            return 0
+        except KeyError as e:
+            logger.error("清理舊檔案失敗（鍵錯誤）: %s", e)
+        except ValueError as e:
+            logger.error("清理舊檔案失敗（值錯誤）: %s", e)
+        except OSError as e:
+            logger.error("清理舊檔案失敗（系統錯誤）: %s", e)
+        except RuntimeError as e:
+            logger.error("清理舊檔案失敗（執行錯誤）: %s", e)
+
+        return 0

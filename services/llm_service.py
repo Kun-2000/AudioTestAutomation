@@ -25,7 +25,7 @@ class LLMService:
             self.model = settings.LLM_MODEL
             logger.info("LLM 服務 (非同步) 初始化成功")
         except Exception as e:
-            logger.error(f"LLM 服務初始化失敗: {e}")
+            logger.error("LLM 服務初始化失敗: %s", e)
             raise
 
     async def analyze_conversation(
@@ -50,11 +50,11 @@ class LLMService:
             response = await self._call_gpt_api(prompt)
             analysis = self._parse_analysis_response(response)
 
-            logger.info(f"分析完成 - 準確率: {analysis.get('accuracy_score', 0):.1f}%")
+            logger.info("分析完成 - 準確率: %.1f%%", analysis.get("accuracy_score", 0))
             return analysis
         except Exception as e:
-            logger.error(f"對話品質分析失敗: {e}")
-            raise RuntimeError(f"LLM 分析錯誤: {e}")
+            logger.error("對話品質分析失敗: %s", e)
+            raise RuntimeError(f"LLM 分析錯誤: {e}") from e
 
     def _normalize_text(self, text: str) -> str:
         """文字正規化處理"""
@@ -115,10 +115,12 @@ class LLMService:
             return response.choices[0].message.content.strip()
         except APIError as e:
             if retry_count < 2:
-                logger.warning(f"GPT API 呼叫失敗，重試中 ({retry_count + 1}/2): {e}")
+                logger.warning(
+                    "GPT API 呼叫失敗，重試中 (%d/2): %s", retry_count + 1, e
+                )
                 return await self._call_gpt_api(prompt, retry_count + 1)
-            logger.error(f"GPT API 呼叫失敗: {e}")
-            raise RuntimeError(f"OpenAI API 錯誤: {e}")
+            logger.error("GPT API 呼叫失敗: %s", e)
+            raise RuntimeError("OpenAI API 錯誤: {e}") from e
 
     def _parse_analysis_response(self, response_text: str) -> Dict[str, Any]:
         """解析 GPT 回應"""
@@ -136,8 +138,8 @@ class LLMService:
             result["accuracy_score"] = max(0, min(100, float(result["accuracy_score"])))
             return result
         except (json.JSONDecodeError, TypeError, ValueError) as e:
-            logger.warning(f"JSON 解析失敗: {e}")
-            logger.warning(f"原始回應: {response_text}")
+            logger.warning("JSON 解析失敗: %s", e)
+            logger.warning("原始回應: %s", response_text)
             return {
                 "accuracy_score": 0.0,
                 "summary": "分析過程發生錯誤",
@@ -157,6 +159,12 @@ class LLMService:
             )
             result = response.choices[0].message.content.strip()
             return bool(result)
-        except Exception as e:
-            logger.error(f"OpenAI GPT 連接測試失敗: {e}")
+        except APIError as e:
+            logger.error("OpenAI API 錯誤: %s", e)
+            return False
+        except ValueError as e:
+            logger.error("值錯誤: %s", e)
+            return False
+        except (ConnectionError, TimeoutError) as e:
+            logger.error("連接或超時錯誤: %s", e)
             return False

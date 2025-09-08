@@ -6,11 +6,9 @@ import base64
 import logging
 import uuid
 import httpx
-import asyncio
-from typing import List
 
 from config.settings import settings
-from models.test_models import TestScript, SpeakerRole, AudioFile, DialogueLine
+from models.test_models import TestScript, SpeakerRole, AudioFile
 from utils.audio_utils import (
     combine_audio_segments,
     create_silence,
@@ -50,7 +48,7 @@ class TTSService:
             logger.info("Yating TTS 服務 (非同步) 初始化成功")
 
         except Exception as e:
-            logger.error(f"Yating TTS 服務初始化失敗: {e}")
+            logger.error("Yating TTS 服務初始化失敗: %s", e)
             raise
 
     async def generate_dialogue_audio(self, test_script: TestScript) -> AudioFile:
@@ -59,7 +57,7 @@ class TTSService:
         if not dialogue_lines:
             raise ValueError("腳本中沒有可識別的對話內容")
 
-        logger.info(f"開始生成對話音檔 (Yating)，共 {len(dialogue_lines)} 行對話")
+        logger.info("開始生成對話音檔 (Yating)，共 %d 行對話", len(dialogue_lines))
 
         audio_segments = []
         for i, line in enumerate(dialogue_lines):
@@ -87,7 +85,7 @@ class TTSService:
             file_size=file_size,
             format="mp3" if self.encoding == "MP3" else "wav",
         )
-        logger.info(f"對話音檔生成成功 (Yating): {filename}, 時長: {duration:.1f}秒")
+        logger.info("對話音檔生成成功 (Yating): %s, 時長: %.1f秒", filename, duration)
         return audio_file
 
     async def _synthesize_speech(self, text: str, speaker: SpeakerRole) -> bytes:
@@ -119,11 +117,11 @@ class TTSService:
         except httpx.HTTPStatusError as e:
             error_detail = e.response.text
             logger.error(
-                f"Yating TTS API 請求失敗: {e.response.status_code} - {error_detail}"
+                "Yating TTS API 請求失敗: %s - %s", e.response.status_code, error_detail
             )
-            raise RuntimeError(f"Yating TTS API 錯誤: {error_detail}")
+            raise RuntimeError(f"Yating TTS API 錯誤: {error_detail}") from e
         except Exception as e:
-            logger.error(f"Yating TTS 底層合成失敗: {e}")
+            logger.error("Yating TTS 底層合成失敗: %s", e)
             raise
 
     async def test_connection(self) -> bool:
@@ -132,5 +130,15 @@ class TTSService:
             await self._synthesize_speech("測試", SpeakerRole.CUSTOMER)
             logger.info("Yating TTS 連接測試成功")
             return True
-        except Exception:
-            return False
+        except httpx.HTTPStatusError as e:
+            error_detail = e.response.text
+            logger.error(
+                "Yating TTS API 請求失敗: %s - %s", e.response.status_code, error_detail
+            )
+            raise RuntimeError(f"Yating TTS API 錯誤: {error_detail}") from e
+        except httpx.RequestError as e:
+            logger.error("Yating TTS API 請求錯誤: %s", e)
+            raise RuntimeError("Yating TTS API 請求錯誤") from e
+        except ValueError as e:
+            logger.error("Yating TTS 回應解析錯誤: %s", e)
+            raise RuntimeError("Yating TTS 回應解析錯誤") from e

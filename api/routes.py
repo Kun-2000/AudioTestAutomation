@@ -2,11 +2,12 @@
 API 路由定義 - 支援7步驟流程
 """
 
+from datetime import datetime, timedelta
 import logging
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
-from datetime import datetime
+import httpx
 
 from services.test_orchestrator import TestOrchestrator
 from models.test_models import TestResult, TestStatus, TestStep, STEP_DISPLAY_NAMES
@@ -15,11 +16,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["客服測試"])
 
-test_orchestrator = None
+test_orchestrator = None  # pylint: disable=invalid-name
 try:
     test_orchestrator = TestOrchestrator()
-except Exception as e:
-    logger.error(f"測試編排器初始化失敗: {e}")
+except ImportError as e:
+    logger.error("測試編排器初始化失敗（匯入錯誤）: %s", e)
+except ValueError as e:
+    logger.error("測試編排器初始化失敗（值錯誤）: %s", e)
 
 # 儲存測試結果的字典
 test_results: Dict[str, TestResult] = {}
@@ -80,13 +83,13 @@ async def start_test(request: TestRequest, background_tasks: BackgroundTasks):
         # 將整個 result 物件傳遞給背景任務
         background_tasks.add_task(run_test_async, result)
 
-        logger.info(f"測試已開始，ID: {result.test_id}")
+        logger.info("測試已開始，ID: %s", result.test_id)
         return TestResponse(
             test_id=result.test_id, status="running", message="測試已開始執行"
         )
     except Exception as e:
-        logger.error(f"開始測試失敗: {e}")
-        raise HTTPException(status_code=500, detail=f"系統錯誤: {str(e)}")
+        logger.error("開始測試失敗: %s", e)
+        raise HTTPException(status_code=500, detail=f"系統錯誤: {str(e)}") from e
 
 
 @router.get("/test/{test_id}/status", response_model=TestStatusResponse)
@@ -135,7 +138,10 @@ async def get_test_report(test_id: str) -> Dict[str, Any]:
             "status": result.status.value,
             "current_step": result.current_step,
             "overall_progress": result.overall_progress,
-            "message": f"測試仍在進行中... 當前步驟: {STEP_DISPLAY_NAMES.get(result.current_step, result.current_step)}",
+            "message": (
+                f"測試仍在進行中... 當前步驟: "
+                f"{STEP_DISPLAY_NAMES.get(result.current_step, result.current_step)}"
+            ),
         }
 
     if result.status == TestStatus.FAILED:
@@ -303,11 +309,19 @@ async def get_system_status() -> Dict[str, Any]:
                 "step_names": list(STEP_DISPLAY_NAMES.values()),
             },
         }
-    except Exception as e:
-        logger.error(f"系統狀態檢查失敗: {e}")
+    except httpx.RequestError as e:
+        logger.error("系統狀態檢查失敗（請求錯誤）: %s", e)
         return {
             "status": "error",
-            "message": f"狀態檢查失敗: {str(e)}",
+            "message": f"狀態檢查失敗（請求錯誤）: {str(e)}",
+            "services": {},
+            "system_info": {"available_steps": 7, "orchestrator_ready": False},
+        }
+    except httpx.HTTPStatusError as e:
+        logger.error("系統狀態檢查失敗（HTTP 錯誤）: %s", e)
+        return {
+            "status": "error",
+            "message": f"狀態檢查失敗（HTTP 錯誤）: {str(e)}",
             "services": {},
             "system_info": {"available_steps": 7, "orchestrator_ready": False},
         }
@@ -372,7 +386,7 @@ async def delete_test(test_id: str) -> Dict[str, Any]:
     # 刪除測試記錄
     del test_results[test_id]
 
-    logger.info(f"測試記錄已刪除: {test_id}")
+    logger.info("測試記錄已刪除: %s", test_id)
 
     return {
         "message": "測試記錄已成功刪除",
@@ -384,7 +398,6 @@ async def delete_test(test_id: str) -> Dict[str, Any]:
 @router.post("/tests/cleanup")
 async def cleanup_old_tests(days: int = 7) -> Dict[str, Any]:
     """清理舊的測試記錄 - 新增API"""
-    from datetime import timedelta
 
     cutoff_date = datetime.now() - timedelta(days=days)
 
@@ -401,7 +414,7 @@ async def cleanup_old_tests(days: int = 7) -> Dict[str, Any]:
         del test_results[test_id]
         cleanup_count += 1
 
-    logger.info(f"清理了 {cleanup_count} 個舊測試記錄")
+    logger.info("清理了 %d 個舊測試記錄", cleanup_count)
 
     return {
         "message": f"已清理 {cleanup_count} 個超過 {days} 天的舊測試記錄",
@@ -414,10 +427,14 @@ async def cleanup_old_tests(days: int = 7) -> Dict[str, Any]:
 async def run_test_async(result: TestResult):
     """在背景執行測試的異步函數"""
     try:
-        logger.info(f"開始執行背景測試: {result.test_id}")
+        logger.info("開始執行背景測試: %s", result.test_id)
         await test_orchestrator.run_full_test(result)
-        logger.info(f"背景測試完成: {result.test_id}")
-    except Exception as e:
-        logger.error(f"背景測試失敗 ({result.test_id}): {e}")
+        logger.info("背景測試完成: %s", result.test_id)
+    except ValueError as e:
+        logger.error("背景測試失敗（值錯誤）(%s): %s", result.test_id, e)
+        result.status = TestStatus.FAILED
+        result.error_message = str(e)
+    except RuntimeError as e:
+        logger.error("背景測試失敗（執行錯誤）(%s): %s", result.test_id, e)
         result.status = TestStatus.FAILED
         result.error_message = str(e)

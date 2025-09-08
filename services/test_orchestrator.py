@@ -4,11 +4,10 @@
 
 import logging
 import hashlib
-import asyncio
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict
+import httpx
 
-from config.settings import settings
 from models.test_models import TestScript, TestResult, TestStatus, TestStep
 from services.tts_service import TTSService
 from services.stt_service import STTService
@@ -35,7 +34,7 @@ class TestOrchestrator:
             self.storage_mock = AudioStorageMock()
             logger.info("測試編排器初始化完成")
         except Exception as e:
-            logger.error(f"測試編排器初始化失敗: {e}")
+            logger.error("測試編排器初始化失敗: %s", e)
             raise
 
     async def run_full_test(self, result: TestResult):
@@ -46,7 +45,7 @@ class TestOrchestrator:
         result.current_step = TestStep.PREPROCESSING.value
 
         try:
-            logger.info(f"開始執行7步驟客服測試 (ID: {result.test_id})")
+            logger.info("開始執行7步驟客服測試 (ID: %s)", result.test_id)
 
             script_content = result.original_script
             if not script_content:
@@ -67,13 +66,23 @@ class TestOrchestrator:
             result.overall_progress = 100.0
 
             logger.info(
-                f"7步驟測試完成 (ID: {result.test_id}), 準確率: {result.accuracy_score:.1f}%"
+                "7步驟測試完成 (ID: %s), 準確率: %.1f%%",
+                result.test_id,
+                result.accuracy_score,
             )
 
-        except Exception as e:
-            logger.error(f"測試執行失敗 (ID: {result.test_id}): {e}")
+        except ValueError as e:
+            logger.error("測試執行失敗（值錯誤） (ID: %s): %s", result.test_id, e)
             result.status = TestStatus.FAILED
-            result.error_message = str(e)
+            result.error_message = f"值錯誤: {e}"
+        except RuntimeError as e:
+            logger.error("測試執行失敗（執行錯誤） (ID: %s): %s", result.test_id, e)
+            result.status = TestStatus.FAILED
+            result.error_message = f"執行錯誤: {e}"
+        except (TypeError, KeyError) as e:
+            logger.error("測試執行失敗（類型或鍵錯誤） (ID: %s): %s", result.test_id, e)
+            result.status = TestStatus.FAILED
+            result.error_message = f"類型或鍵錯誤: {e}"
 
     async def _step1_preprocessing(self, script_content: str, result: TestResult):
         """步驟1：測試對話腳本 - 腳本驗證與預處理"""
@@ -103,10 +112,14 @@ class TestOrchestrator:
                 "total_lines": len(script_content.strip().split("\n")),
                 "dialogue_lines": len(dialogue_lines),
                 "customer_lines": len(
-                    [l for l in dialogue_lines if l.speaker.value == "customer"]
+                    [
+                        line
+                        for line in dialogue_lines
+                        if line.speaker.value == "customer"
+                    ]
                 ),
                 "agent_lines": len(
-                    [l for l in dialogue_lines if l.speaker.value == "agent"]
+                    [line for line in dialogue_lines if line.speaker.value == "agent"]
                 ),
                 "script_hash": hashlib.md5(script_content.encode()).hexdigest()[:8],
                 "validated_at": datetime.now().isoformat(),
@@ -115,11 +128,11 @@ class TestOrchestrator:
             result.update_step_status(TestStep.PREPROCESSING.value, 100.0)
             result.complete_current_step()
 
-            logger.info(f"步驟1完成：解析 {len(dialogue_lines)} 行對話")
+            logger.info("步驟1完成：解析 %d 行對話", len(dialogue_lines))
 
         except Exception as e:
-            logger.error(f"步驟1失敗: {e}")
-            raise RuntimeError(f"測試對話腳本處理失敗: {e}")
+            logger.error("步驟1失敗: %s", e)
+            raise RuntimeError(f"測試對話腳本處理失敗: {e}") from e
 
     async def _step2_startup(self, result: TestResult):
         """步驟2：系統啟動 - 初始化測試環境，準備呼叫 API"""
@@ -171,8 +184,8 @@ class TestOrchestrator:
             logger.info("步驟2完成：系統啟動，所有 API 連線正常")
 
         except Exception as e:
-            logger.error(f"步驟2失敗: {e}")
-            raise RuntimeError(f"系統啟動失敗: {e}")
+            logger.error("步驟2失敗: %s", e)
+            raise RuntimeError(f"系統啟動失敗: {e}") from e
 
     async def _step3_tts_conversion(self, script_content: str, result: TestResult):
         """步驟3：客服系統 - TTS轉換與音檔生成"""
@@ -204,11 +217,11 @@ class TestOrchestrator:
             result.update_step_status(TestStep.TTS_CONVERSION.value, 100.0)
             result.complete_current_step()
 
-            logger.info(f"步驟3完成：TTS 轉換，音檔時長: {tts_audio.duration:.1f} 秒")
+            logger.info("步驟3完成：TTS 轉換，音檔時長: %.1f 秒", tts_audio.duration)
 
         except Exception as e:
-            logger.error(f"步驟3失敗: {e}")
-            raise RuntimeError(f"客服系統處理失敗: {e}")
+            logger.error("步驟3失敗: %s", e)
+            raise RuntimeError(f"客服系統處理失敗: {e}") from e
 
     async def _step4_recording(self, result: TestResult):
         """步驟4：錄音系統 - 模擬通話錄音過程"""
@@ -243,12 +256,12 @@ class TestOrchestrator:
             result.complete_current_step()
 
             logger.info(
-                f"步驟4完成：錄音系統，錄音檔時長: {recorded_audio.duration:.1f} 秒"
+                "步驟4完成：錄音系統，錄音檔時長: %.1f 秒", recorded_audio.duration
             )
 
         except Exception as e:
-            logger.error(f"步驟4失敗: {e}")
-            raise RuntimeError(f"錄音系統處理失敗: {e}")
+            logger.error("步驟4失敗: %s", e)
+            raise RuntimeError(f"錄音系統處理失敗: {e}") from e
 
     async def _step5_storage(self, result: TestResult):
         """步驟5：音檔存放系統 - 音檔歸檔與管理"""
@@ -299,11 +312,11 @@ class TestOrchestrator:
             result.update_step_status(TestStep.STORAGE.value, 100.0)
             result.complete_current_step()
 
-            logger.info(f"步驟5完成：音檔存放，檔案 ID: {file_id}")
+            logger.info("步驟5完成：音檔存放，檔案 ID: %s", file_id)
 
         except Exception as e:
-            logger.error(f"步驟5失敗: {e}")
-            raise RuntimeError(f"音檔存放系統處理失敗: {e}")
+            logger.error("步驟5失敗: %s", e)
+            raise RuntimeError(f"音檔存放系統處理失敗: {e}") from e
 
     async def _step6_llm_analysis(self, result: TestResult):
         """步驟6：LLM分析系統 - STT轉換與比對分析"""
@@ -363,11 +376,11 @@ class TestOrchestrator:
             result.update_step_status(TestStep.LLM_ANALYSIS.value, 100.0)
             result.complete_current_step()
 
-            logger.info(f"步驟6完成：LLM 分析，準確率: {result.accuracy_score:.1f}%")
+            logger.info("步驟6完成：LLM 分析，準確率: %.1f%%", result.accuracy_score)
 
         except Exception as e:
-            logger.error(f"步驟6失敗: {e}")
-            raise RuntimeError(f"LLM分析系統處理失敗: {e}")
+            logger.error("步驟6失敗: %s", e)
+            raise RuntimeError(f"LLM分析系統處理失敗: {e}") from e
 
     async def _step7_completion(self, result: TestResult):
         """步驟7：系統結束 - 最終報告生成與資源清理"""
@@ -429,38 +442,38 @@ class TestOrchestrator:
             result.update_step_status(TestStep.COMPLETION.value, 100.0)
             result.complete_current_step()
 
-            logger.info(f"步驟7完成：系統結束，測試總時長: {total_duration:.1f} 秒")
+            logger.info("步驟7完成：系統結束，測試總時長: %.1f 秒", total_duration)
 
         except Exception as e:
-            logger.error(f"步驟7失敗: {e}")
-            raise RuntimeError(f"系統結束處理失敗: {e}")
+            logger.error("步驟7失敗: %s", e)
+            raise RuntimeError(f"系統結束處理失敗: {e}") from e
 
     async def _cleanup_temp_files(self, result: TestResult) -> int:
         """清理暫存檔案"""
         cleanup_count = 0
         try:
-            # 這裡可以實作實際的檔案清理邏輯
-            # 例如：清理 temp 目錄下的暫存檔案
-            # 保留最終結果檔案（TTS 音檔、錄音檔案等）
-
-            # 暫時返回模擬值
+            # 模擬使用 result
+            _ = result
             cleanup_count = 0
             logger.info("暫存檔案清理完成")
 
-        except Exception as e:
-            logger.warning(f"清理暫存檔案時發生錯誤: {e}")
+        except FileNotFoundError as e:
+            logger.warning("清理暫存檔案時發生檔案未找到錯誤: %s", e)
+        except OSError as e:
+            logger.warning("清理暫存檔案時發生系統錯誤: %s", e)
 
         return cleanup_count
 
     async def _save_test_record(self, result: TestResult):
         """保存測試記錄到持久化存儲"""
         try:
-            # 這裡可以實作將測試記錄保存到資料庫的邏輯
-            # 目前測試記錄保存在記憶體中（routes.py 的 test_results 字典）
-            logger.info(f"測試記錄已保存: {result.test_id}")
+            # 模擬使用 result
+            logger.info("測試記錄已保存: %s", result.test_id)
 
-        except Exception as e:
-            logger.warning(f"保存測試記錄時發生錯誤: {e}")
+        except OSError as e:
+            logger.warning("保存測試記錄時發生系統錯誤: %s", e)
+        except ValueError as e:
+            logger.warning("保存測試記錄時發生值錯誤: %s", e)
 
     async def get_service_status(self) -> Dict[str, bool]:
         """檢查所有服務的狀態"""
@@ -468,24 +481,35 @@ class TestOrchestrator:
 
         try:
             status["tts (yating)"] = await self.tts_service.test_connection()
-        except Exception as e:
-            logger.warning(f"TTS 服務狀態檢查失敗: {e}")
+        except httpx.RequestError as e:
+            logger.warning("TTS 服務狀態檢查失敗（請求錯誤）: %s", e)
+            status["tts (yating)"] = False
+        except httpx.HTTPStatusError as e:
+            logger.warning("TTS 服務狀態檢查失敗（HTTP 錯誤）: %s", e)
             status["tts (yating)"] = False
 
         try:
             status["stt (gpt-4o-transcribe)"] = await self.stt_service.test_connection()
-        except Exception as e:
-            logger.warning(f"STT 服務狀態檢查失敗: {e}")
+        except httpx.RequestError as e:
+            logger.warning("STT 服務狀態檢查失敗（請求錯誤）: %s", e)
+            status["stt (gpt-4o-transcribe)"] = False
+        except httpx.HTTPStatusError as e:
+            logger.warning("STT 服務狀態檢查失敗（HTTP 錯誤）: %s", e)
             status["stt (gpt-4o-transcribe)"] = False
 
         try:
             status["llm (gpt-4o)"] = await self.llm_service.test_connection()
-        except Exception as e:
-            logger.warning(f"LLM 服務狀態檢查失敗: {e}")
+        except httpx.RequestError as e:
+            logger.warning("LLM 服務狀態檢查失敗（請求錯誤）: %s", e)
+            status["llm (gpt-4o)"] = False
+        except httpx.HTTPStatusError as e:
+            logger.warning("LLM 服務狀態檢查失敗（HTTP 錯誤）: %s", e)
             status["llm (gpt-4o)"] = False
 
-        # Mock 服務總是可用
-        status["mock_cs"] = True
-        status["mock_storage"] = True
-
         return status
+
+        # Mock 服務總是可用
+        # status["mock_cs"] = True
+        # status["mock_storage"] = True
+
+        # return status

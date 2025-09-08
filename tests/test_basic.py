@@ -2,19 +2,17 @@
 基本單元測試檔案
 """
 
-import pytest
-import asyncio
-from unittest.mock import patch
 from pathlib import Path
 import sys
+from models.test_models import TestScript, SpeakerRole
+from utils.audio_utils import create_silence
+from config.settings import settings
+from mock.customer_service import CustomerServiceMock
+from mock.audio_storage import AudioStorageMock
 
 # 添加專案根目錄到路徑
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
-
-from models.test_models import TestScript, SpeakerRole
-from utils.audio_utils import create_silence, combine_audio_segments
-from config.settings import settings
 
 
 class TestModels:
@@ -51,8 +49,6 @@ class TestMockServices:
         source_content = b"dummy_audio_content"
         source_file.write_bytes(source_content)
 
-        from mock.customer_service import CustomerServiceMock
-
         cs_mock = CustomerServiceMock()
 
         # 2. 執行模擬通話
@@ -69,8 +65,6 @@ class TestMockServices:
         # 1. 準備假檔案
         source_file = tmp_path / "test.mp3"
         source_file.touch()
-
-        from mock.audio_storage import AudioStorageMock
 
         storage_mock = AudioStorageMock()
         file_id = storage_mock.store_audio(str(source_file), {"test": "data"})

@@ -2,18 +2,15 @@
 整合測試檔案 - 測試 TestOrchestrator
 """
 
-import pytest
-import asyncio
-from unittest.mock import MagicMock, AsyncMock
-from pathlib import Path
 import sys
+from pathlib import Path
+import pytest
+from services.test_orchestrator import TestOrchestrator
+from models.test_models import AudioFile, TestStatus
 
 # 添加專案根目錄到路徑
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
-
-from services.test_orchestrator import TestOrchestrator
-from models.test_models import AudioFile, TestStatus
 
 
 @pytest.mark.asyncio

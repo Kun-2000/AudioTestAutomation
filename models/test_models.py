@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any
 from enum import Enum
 import uuid
-import hashlib
 from pathlib import Path
 
 
@@ -193,7 +192,7 @@ class TestResult:
         self,
         step: str,
         progress: float = 0.0,
-        sub_stage: Optional[str] = None,
+        _sub_stage: Optional[str] = None,
         additional_info: Optional[Dict[str, Any]] = None,
     ):
         """更新步驟狀態"""

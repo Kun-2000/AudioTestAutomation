@@ -29,7 +29,7 @@ class STTService:
             logger.info("STT 服務 (非同步) 初始化成功")
 
         except Exception as e:
-            logger.error(f"STT 服務初始化失敗: {e}")
+            logger.error("STT 服務初始化失敗: %s", e)
             raise
 
     async def transcribe_audio(self, audio_file_path: str) -> Tuple[str, float]:
@@ -51,7 +51,7 @@ class STTService:
             if file_size < 1024:
                 raise ValueError("檔案過小，可能沒有有效的音檔內容")
 
-            logger.info(f"開始轉錄音檔: {audio_path.name} ({file_size / 1024:.1f} KB)")
+            logger.info("開始轉錄音檔: %s (%.1f KB)", audio_path.name, file_size / 1024)
 
             with open(audio_file_path, "rb") as audio_file:
                 # 改為 await
@@ -72,20 +72,22 @@ class STTService:
             confidence = 1.0
 
             logger.info(
-                f"轉錄成功: {transcript[:50]}{'...' if len(transcript) > 50 else ''}"
+                "轉錄成功: %s%s",
+                transcript[:50],
+                "..." if len(transcript) > 50 else "",
             )
 
             return transcript, confidence
 
         except APIError as e:
-            logger.error(f"OpenAI API 錯誤: {e}")
-            raise RuntimeError(f"語音轉錄失敗: {e}")
+            logger.error("OpenAI API 錯誤: %s", e)
+            raise RuntimeError(f"語音轉錄失敗: {e}") from e
         except (FileNotFoundError, ValueError) as e:
-            logger.error(f"檔案處理錯誤: {e}")
+            logger.error("檔案處理錯誤: %s", e)
             raise
         except Exception as e:
-            logger.error(f"STT 服務錯誤: {e}")
-            raise RuntimeError(f"語音轉錄失敗: {e}")
+            logger.error("STT 服務錯誤: %s", e)
+            raise RuntimeError(f"語音轉錄失敗: {e}") from e
 
     async def test_connection(self) -> bool:
         """測試 OpenAI GPT-4o-transcribe 連接 (非同步版本)"""
@@ -97,11 +99,17 @@ class STTService:
             model_available = self.model in available_models
 
             if model_available:
-                logger.info(f"OpenAI {self.model} 連接測試成功")
+                logger.info("OpenAI %s 連接測試成功", self.model)
                 return True
             else:
-                logger.warning(f"未找到 {self.model} 模型")
+                logger.warning("未找到 %s 模型", self.model)
                 return False
-        except Exception as e:
-            logger.error(f"OpenAI GPT-4o-transcribe 連接測試失敗: {e}")
+        except APIError as e:
+            logger.error("OpenAI API 錯誤: %s", e)
+            return False
+        except ValueError as e:
+            logger.error("值錯誤: %s", e)
+            return False
+        except (ConnectionError, TimeoutError) as e:
+            logger.error("連接或超時錯誤: %s", e)
             return False

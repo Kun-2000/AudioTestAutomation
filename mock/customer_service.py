@@ -40,7 +40,7 @@ class CustomerServiceMock:
             if not source_path.exists():
                 raise FileNotFoundError(f"輸入音檔不存在: {input_audio_path}")
 
-            logger.info(f"開始模擬客服通話 (錄音模式)，輸入音檔: {source_path.name}")
+            logger.info("開始模擬客服通話 (錄音模式)，輸入音檔: %s", source_path.name)
 
             # 模擬系統處理所需的時間
             processing_time = random.uniform(0.5, 1.5)
@@ -65,10 +65,10 @@ class CustomerServiceMock:
                 format=source_path.suffix.lstrip("."),
             )
 
-            logger.info(f"模擬錄音已生成: {filename}, 時長: {duration:.1f}秒")
+            logger.info("模擬錄音已生成: %s, 時長: %.1f秒", filename, duration)
 
             return audio_file
 
         except Exception as e:
-            logger.error(f"模擬客服通話失敗: {e}")
-            raise RuntimeError(f"Mock 客服系統錯誤: {e}")
+            logger.error("模擬客服通話失敗: %s", e)
+            raise RuntimeError(f"Mock 客服系統錯誤: {e}") from e
