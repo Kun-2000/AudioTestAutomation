@@ -38,7 +38,7 @@
 - **整合多種 AI 服務**：
   - **TTS**: Yating (雅婷)
   - **STT**: OpenAI (`whisper-1`, `gpt-4o-transcribe`)
-  - **LLM**: OpenAI (`gpt-4o`, `gpt-5`)
+  - **LLM**: OpenAI (`gpt-4o`, `gpt-4o-mini`)
 - **非同步後端處理**：後端採用 FastAPI，測試流程在背景任務中執行，確保使用者介面在測試進行中依然保持流暢。
 - **完整的自動化測試**：專案包含單元測試與整合測試 (`pytest`)，確保程式碼的穩定與可靠。
 
