@@ -20,8 +20,8 @@ logging.basicConfig(
 
 # 創建 FastAPI 應用程式
 app = FastAPI(
-    title="客服測試系統",
-    description="使用 TTS、STT、LLM 的客服對話品質測試系統",
+    title="自動化測試錄音功能系統",
+    description="使用 TTS、STT、LLM 的自動化測試錄音功能系統",
     version="1.0.0",
     debug=settings.DEBUG,
 )
@@ -35,8 +35,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- 新增部分：掛載靜態檔案目錄 ---
-# 這會讓 storage 資料夾下的所有檔案，可以透過 /storage/... 的網址被存取
 storage_path = Path(__file__).parent.parent / "storage"
 app.mount("/storage", StaticFiles(directory=storage_path), name="storage")
 
