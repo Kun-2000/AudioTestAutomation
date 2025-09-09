@@ -13,6 +13,8 @@ from pathlib import Path
 class TestStatus(Enum):
     """測試狀態列舉"""
 
+    __test__ = False
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -21,6 +23,8 @@ class TestStatus(Enum):
 
 class TestStep(Enum):
     """測試步驟列舉 - 7個步驟"""
+
+    __test__ = False
 
     IDLE = "idle"
     PREPROCESSING = "preprocessing"  # 測試對話腳本
@@ -76,6 +80,8 @@ class DialogueLine:
 class TestScript:
     """測試腳本資料"""
 
+    __test__ = False
+
     content: str
     dialogue_lines: List[DialogueLine] = field(default_factory=list)
 
@@ -127,6 +133,8 @@ class StepDetail:
 @dataclass
 class TestResult:
     """測試結果資料 - 支援7步驟流程"""
+
+    __test__ = False
 
     # 基本資訊
     test_id: str = field(default_factory=lambda: str(uuid.uuid4()))

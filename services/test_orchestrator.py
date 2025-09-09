@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 class TestOrchestrator:
     """客服測試編排器 - 支援7步驟流程"""
 
+    __test__ = False
+
     def __init__(self):
         """初始化測試編排器"""
         try:
