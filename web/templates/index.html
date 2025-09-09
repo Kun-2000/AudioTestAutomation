@@ -1315,9 +1315,9 @@
             <div class="arrow-head"></div>
           </div>
 
-          <!-- 圓圈 6: LLM分析系統 -->
+          <!-- 圓圈 6: 分析系統 -->
           <div class="system-circle idle" id="circle-llm-analysis">
-            LLM分析系統
+            分析系統
           </div>
 
           <!-- 箭頭 6 -->
@@ -1506,12 +1506,12 @@
           </div>
         </div>
 
-        <!-- 步驟6：LLM分析系統 -->
+        <!-- 步驟6：分析系統 -->
         <div class="step-section step-idle minimized" id="step-llm-analysis">
           <div class="step-header" onclick="toggleStepContent('llm-analysis')">
             <div class="step-title">
               <div class="step-number">6</div>
-              <span>🤖 LLM分析系統</span>
+              <span>🤖 分析系統</span>
             </div>
             <div class="step-status idle">待機中</div>
           </div>
@@ -2336,7 +2336,15 @@
         if (analysis?.key_differences?.length > 0) {
           resultHtml += '<div class="result-box fade-enter no-bullets"><strong>🔍 主要差異:</strong><ul>';
           analysis.key_differences.forEach((diff) => {
-            resultHtml += `<li>• ${diff}</li>`;
+            
+            let diffText = '';
+            if (typeof diff === 'object' && diff !== null) {
+              diffText = Object.values(diff)[0] || JSON.stringify(diff);
+            } else {
+              diffText = diff;
+            }
+
+            resultHtml += `<li>• ${diffText}</li>`;
           });
           resultHtml += "</ul></div>";
         }
