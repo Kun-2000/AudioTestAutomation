@@ -101,7 +101,7 @@ YATING_API_KEY="your-yating-api-key"
 
 # [可選] 覆蓋預設模型或其他設定
 STT_MODEL=whisper-1
-LLM_MODEL=gpt-4o-mini
+LLM_MODEL=gpt-4o
 ```
 
 #### 步驟 5: 啟動應用程式
