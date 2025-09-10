@@ -57,19 +57,21 @@ class LLMService:
             raise RuntimeError(f"LLM 分析錯誤: {e}") from e
 
     def _normalize_text(self, text: str) -> str:
-        """文字正規化處理"""
+        """文字正規化處理（移除所有標點符號）"""
         if not text:
             return ""
+        # 將多個空白字元壓縮為單一空格
         text = re.sub(r"\s+", " ", text.strip())
-        text = text.replace("，", ",").replace("。", ".")
-        text = text.replace("？", "?").replace("！", "!")
-        text = text.replace("：", ":").replace("；", ";")
+        # 移除「客戶:」和「客服:」等角色標識
         text = re.sub(
             r"^(客戶|客服|customer|agent)\s*[：:]\s*",
             "",
             text,
             flags=re.MULTILINE | re.IGNORECASE,
         )
+        # 使用正規表示式移除所有中英文標點符號
+        # 這會移除所有不是字母、數字、底線或空白字元的字元
+        text = re.sub(r"[^\w\s]", "", text)
         return text.strip()
 
     def _build_analysis_prompt(self, original: str, transcribed: str) -> str:
